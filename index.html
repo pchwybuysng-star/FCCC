@@ -1,0 +1,3040 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Crystal Lab 3D Simulator - ระบบจำลองโครงสร้างผลึกและแลปเรียงลูกปิงปอง</title>
+    <!-- External Three.js libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        :root {
+            --bg-main: #070b14;
+            --bg-panel: rgba(15, 23, 42, 0.96);
+            --bg-card: rgba(30, 41, 59, 0.65);
+            --border-color: rgba(56, 189, 248, 0.35);
+            --border-subtle: rgba(71, 85, 105, 0.8);
+            --accent-cyan: #38bdf8;
+            --accent-blue: #0284c7;
+            --accent-amber: #fbbf24;
+            --accent-emerald: #10b981;
+            --accent-pink: #ec4899;
+            --accent-purple: #a855f7;
+            --accent-rose: #ef4444;
+            --text-primary: #ffffff;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+        }
+
+        /* Light Theme CSS Variables */
+        body.light-theme {
+            --bg-main: #f1f5f9;
+            --bg-panel: rgba(255, 255, 255, 0.96);
+            --bg-card: rgba(241, 245, 249, 0.9);
+            --border-color: rgba(2, 132, 199, 0.35);
+            --border-subtle: rgba(203, 213, 225, 0.9);
+            --text-primary: #0f172a;
+            --text-secondary: #334155;
+            --text-muted: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Kanit', Prompt, sans-serif;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            overflow: hidden;
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        #canvas-container {
+            flex: 1;
+            height: 100%;
+            position: relative;
+            outline: none;
+            cursor: grab;
+        }
+
+        #canvas-container:active {
+            cursor: grabbing;
+        }
+
+        /* Sidebar Styling */
+        #sidebar {
+            width: 390px;
+            min-width: 350px;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(9, 13, 22, 0.99) 100%);
+            backdrop-filter: blur(20px);
+            border-left: 1px solid var(--border-color);
+            padding: 20px 18px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            z-index: 10;
+            box-shadow: -10px 0 35px rgba(0, 0, 0, 0.65);
+            transition: background 0.3s ease;
+        }
+
+        body.light-theme #sidebar {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.99) 100%);
+            box-shadow: -8px 0 25px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #sidebar::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+
+        .header-title {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 12px;
+        }
+
+        .header-title h1 {
+            font-size: 1.4rem;
+            color: var(--accent-cyan);
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        body.light-theme .header-title h1 {
+            color: #0284c7;
+        }
+
+        .header-title p {
+            font-size: 0.84rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* Tab Navigation */
+        .tab-nav {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            background: rgba(30, 41, 59, 0.6);
+            padding: 5px;
+            border-radius: 14px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        body.light-theme .tab-nav {
+            background: rgba(226, 232, 240, 0.8);
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 8px 4px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .tab-btn .tab-icon {
+            font-size: 1.25rem;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        body.light-theme .tab-btn:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            color: #ffffff !important;
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.5);
+        }
+
+        /* Control Groups */
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 12px 14px;
+        }
+
+        .group-title {
+            font-size: 0.84rem;
+            color: var(--accent-cyan);
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        body.light-theme .group-title {
+            color: #0369a1;
+        }
+
+        label {
+            font-size: 0.86rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        select,
+        button {
+            padding: 9px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-subtle);
+            background: #1e293b;
+            color: #ffffff;
+            font-size: 0.86rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        body.light-theme select,
+        body.light-theme button {
+            background: #f8fafc;
+            color: #0f172a;
+            border-color: #cbd5e1;
+        }
+
+        select:hover,
+        button:hover {
+            background: #334155;
+            border-color: var(--accent-cyan);
+        }
+
+        body.light-theme select:hover,
+        body.light-theme button:hover {
+            background: #e2e8f0;
+            border-color: #0284c7;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+            border-color: #38bdf8 !important;
+            color: white !important;
+            font-weight: 700;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #0369a1 0%, #075985 100%) !important;
+            box-shadow: 0 0 14px rgba(56, 189, 248, 0.5);
+        }
+
+        .btn-secondary {
+            background: rgba(30, 41, 59, 0.85);
+            border: 1px solid var(--border-subtle);
+            color: #f1f5f9;
+        }
+
+        .btn-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .btn-row-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px;
+        }
+
+        .btn-toggle-active {
+            background: #0284c7 !important;
+            border-color: #38bdf8 !important;
+            color: white !important;
+            font-weight: 700 !important;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.45);
+        }
+
+        /* Sliders */
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            accent-color: var(--accent-cyan);
+            height: 6px;
+            border-radius: 3px;
+            background: #334155;
+            cursor: pointer;
+        }
+
+        body.light-theme input[type="range"] {
+            background: #cbd5e1;
+            accent-color: #0284c7;
+        }
+
+        .slider-val {
+            font-size: 0.86rem;
+            font-weight: 800;
+            color: var(--accent-cyan);
+            min-width: 40px;
+            text-align: right;
+        }
+
+        body.light-theme .slider-val {
+            color: #0284c7;
+        }
+
+        /* Checkbox Rows */
+        .check-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .check-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(15, 23, 42, 0.7);
+            padding: 8px 10px;
+            border-radius: 10px;
+            border: 1px solid var(--border-subtle);
+            cursor: pointer;
+            font-size: 0.84rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            transition: all 0.2s;
+        }
+
+        body.light-theme .check-item {
+            background: rgba(241, 245, 249, 0.8);
+        }
+
+        .check-item:hover {
+            border-color: var(--accent-cyan);
+            background: rgba(30, 41, 59, 0.8);
+        }
+
+        body.light-theme .check-item:hover {
+            background: #e2e8f0;
+        }
+
+        .check-item input[type="checkbox"] {
+            accent-color: var(--accent-cyan);
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        /* Info Card */
+        .info-card {
+            background: #090d16;
+            border-radius: 12px;
+            padding: 14px 16px;
+            border: 1.5px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            font-size: 0.88rem;
+            box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
+        }
+
+        body.light-theme .info-card {
+            background: #ffffff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            border-color: #bae6fd;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .info-label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .info-value {
+            font-size: 1.05rem;
+            color: var(--accent-cyan);
+            font-weight: 800;
+            text-align: right;
+        }
+
+        body.light-theme .info-value {
+            color: #0284c7;
+        }
+
+        /* Explanation Box */
+        .explain-box {
+            background: rgba(15, 23, 42, 0.85);
+            border-left: 4px solid var(--accent-cyan);
+            padding: 14px 16px;
+            border-radius: 0 12px 12px 0;
+            font-size: 0.86rem;
+            color: #f1f5f9;
+            line-height: 1.6;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        }
+
+        body.light-theme .explain-box {
+            background: #ffffff;
+            color: #1e293b;
+            border-left-color: #0284c7;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .explain-box b {
+            color: #38bdf8;
+            font-weight: 700;
+        }
+
+        body.light-theme .explain-box b {
+            color: #0284c7;
+        }
+
+        .explain-box .highlight-t {
+            color: #ec4899;
+            font-weight: 800;
+        }
+
+        .explain-box .highlight-o {
+            color: #ef4444;
+            font-weight: 800;
+        }
+
+        /* Legend */
+        .legend-list {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            font-size: 0.85rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-primary);
+            font-weight: 600;
+            background: rgba(30, 41, 59, 0.35);
+            padding: 5px 8px;
+            border-radius: 8px;
+        }
+
+        body.light-theme .legend-item {
+            background: rgba(241, 245, 249, 0.8);
+            color: #1e293b;
+        }
+
+        .color-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 10px currentColor;
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            flex-shrink: 0;
+        }
+
+        /* Canvas Floating Overlays */
+        #viewport-controls {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            display: flex;
+            gap: 8px;
+            z-index: 5;
+            background: rgba(15, 23, 42, 0.92);
+            padding: 6px;
+            border-radius: 14px;
+            border: 1.5px solid var(--border-color);
+            backdrop-filter: blur(14px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.55);
+        }
+
+        body.light-theme #viewport-controls {
+            background: rgba(255, 255, 255, 0.94);
+            border-color: #cbd5e1;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+        }
+
+        .view-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: #1e293b;
+            color: #f8fafc;
+            border: 1px solid transparent;
+            padding: 0;
+            font-size: 1.15rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        body.light-theme .view-btn {
+            background: #f1f5f9;
+            color: #0f172a;
+            border-color: #cbd5e1;
+        }
+
+        .view-btn:hover {
+            background: #0284c7;
+            color: white;
+            border-color: #38bdf8;
+            transform: translateY(-1px);
+        }
+
+        .view-btn.active {
+            background: #0284c7;
+            color: white;
+            border-color: #38bdf8;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
+        }
+
+        /* Quick Action Bar Top-Right */
+        #quick-actions {
+            position: absolute;
+            top: 16px;
+            right: 410px;
+            display: flex;
+            gap: 8px;
+            z-index: 5;
+        }
+
+        .quick-btn {
+            background: rgba(15, 23, 42, 0.92);
+            border: 1.5px solid var(--border-color);
+            color: #f8fafc;
+            padding: 9px 14px;
+            border-radius: 12px;
+            backdrop-filter: blur(14px);
+            font-size: 0.85rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        body.light-theme .quick-btn {
+            background: rgba(255, 255, 255, 0.94);
+            color: #0f172a;
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+
+        .quick-btn:hover {
+            background: #0284c7;
+            color: white;
+            border-color: #38bdf8;
+            transform: translateY(-1px);
+        }
+
+        /* Interactive Atom Tooltip HUD */
+        #atomTooltip {
+            position: absolute;
+            display: none;
+            pointer-events: none;
+            z-index: 20;
+            background: rgba(15, 23, 42, 0.96);
+            border: 2px solid #38bdf8;
+            border-radius: 14px;
+            padding: 12px 16px;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(14px);
+            font-size: 0.84rem;
+            color: #ffffff;
+            max-width: 270px;
+            transform: translate(-50%, -125%);
+            transition: opacity 0.15s ease;
+        }
+
+        #atomTooltip .tooltip-title {
+            font-weight: 800;
+            color: var(--accent-cyan);
+            font-size: 0.95rem;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        #atomTooltip .tooltip-row {
+            display: flex;
+            justify-content: space-between;
+            color: #cbd5e1;
+            font-size: 0.8rem;
+            margin: 3px 0;
+            font-weight: 600;
+        }
+
+        #atomTooltip .tooltip-val {
+            color: #ffffff;
+            font-weight: 700;
+        }
+
+        /* Modal Base */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.82);
+            backdrop-filter: blur(14px);
+            z-index: 100;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: #0f172a;
+            border: 2px solid #38bdf8;
+            border-radius: 18px;
+            max-width: 920px;
+            width: 100%;
+            max-height: 88vh;
+            overflow-y: auto;
+            padding: 26px 30px;
+            box-shadow: 0 14px 50px rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            animation: fadeInModal 0.25s ease;
+        }
+
+        @keyframes fadeInModal {
+            from { opacity: 0; transform: scale(0.96); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1.5px solid #334155;
+            padding-bottom: 12px;
+        }
+
+        .modal-header h2 {
+            color: #38bdf8;
+            font-size: 1.35rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .close-btn {
+            width: 36px;
+            height: 36px;
+            font-size: 1.3rem;
+            background: #1e293b;
+            border: 1px solid #475569;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .close-btn:hover {
+            background: #ef4444;
+            border-color: #ef4444;
+            transform: rotate(90deg);
+        }
+
+        .lab-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+            margin-top: 8px;
+        }
+
+        .lab-table th,
+        .lab-table td {
+            border: 1px solid #334155;
+            padding: 10px 14px;
+            text-align: left;
+        }
+
+        .lab-table th {
+            background: rgba(30, 41, 59, 0.9);
+            color: #38bdf8;
+            font-weight: 700;
+        }
+
+        .lab-table tr:nth-child(even) {
+            background: rgba(30, 41, 59, 0.4);
+        }
+
+        .qa-card {
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 12px;
+            padding: 14px 16px;
+            border-left: 4px solid #38bdf8;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .qa-card h4 {
+            color: #ffffff;
+            font-size: 0.98rem;
+            font-weight: 700;
+        }
+
+        .qa-card p {
+            color: #cbd5e1;
+            font-size: 0.88rem;
+            line-height: 1.55;
+        }
+
+        /* Toast notification */
+        #toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: rgba(15, 23, 42, 0.96);
+            border: 1.5px solid var(--accent-cyan);
+            color: #ffffff;
+            padding: 11px 22px;
+            border-radius: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(12px);
+            z-index: 200;
+            font-size: 0.9rem;
+            font-weight: 600;
+            opacity: 0;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        @media (max-width: 900px) {
+            body { flex-direction: column; }
+            #sidebar { width: 100%; height: 48vh; border-left: none; border-top: 1px solid var(--border-color); }
+            #canvas-container { height: 52vh; }
+            #quick-actions { right: 16px; top: 72px; }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 3D Canvas Area -->
+    <div id="canvas-container">
+        <!-- Viewport Controls Top-Left -->
+        <div id="viewport-controls">
+            <button class="view-btn" id="btnViewTop" title="Top View (2D มองจากด้านบนตรง)">🎯</button>
+            <button class="view-btn" id="btnViewSide" title="Side View (มองจากด้านข้าง A-B-A/C)">📐</button>
+            <button class="view-btn active" id="btnView3D" title="3D Perspective (หมุนอิสระ 3 มิติ)">🔄</button>
+            <button class="view-btn" id="btnAutoRotate" title="เปิด/ปิด การหมุนอัตโนมัติ">⏸</button>
+            <button class="view-btn" id="btnThemeToggle" title="🌓 สลับโหมดสีพื้นหลัง: มืดสบายตา / ขาวห้องแลป">🌓</button>
+            <button class="view-btn" id="btnToggleAxes" title="เปิด/ปิด แกนอ้างอิง 3 มิติ (X:แดง, Y:เขียว, Z:น้ำเงิน)">🌐</button>
+            <button class="view-btn" id="btnScreenshot" title="📸 บันทึกภาพ 3 มิติ คมชัดสำหรับใส่รายงานแลป">📸</button>
+            <button class="view-btn" id="btnResetView" title="รีเซ็ตตำแหน่งกล้อง">🔍</button>
+        </div>
+
+        <!-- Quick Action Bar Top-Right -->
+        <div id="quick-actions">
+            <button class="quick-btn" id="btnOpenCalc">
+                <span>🧮</span><span>เครื่องคำนวณผลึก</span>
+            </button>
+            <button class="quick-btn" id="btnOpenQuiz">
+                <span>📝</span><span>แบบทดสอบแลป</span>
+            </button>
+        </div>
+
+        <!-- Hover Atom Tooltip HUD -->
+        <div id="atomTooltip">
+            <div class="tooltip-title" id="ttTitle">อนุภาค</div>
+            <div class="tooltip-row"><span>ตำแหน่ง:</span><span class="tooltip-val" id="ttPos">-</span></div>
+            <div class="tooltip-row"><span>สัดส่วนในยูนิตเซลล์:</span><span class="tooltip-val" id="ttFrac">-</span></div>
+            <div class="tooltip-row"><span>บทบาท / คำอธิบาย:</span><span class="tooltip-val" id="ttRole" style="font-weight: normal; color:#e2e8f0;">-</span></div>
+        </div>
+    </div>
+
+    <!-- Sidebar Controls -->
+    <div id="sidebar">
+        <!-- Header -->
+        <div class="header-title">
+            <h1>🧪 Crystal Lab 3D</h1>
+            <p>ระบบจำลองโครงสร้างผลึก & แลปเรียงลูกปิงปอง 3 มิติ</p>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+            <button class="tab-btn active" data-tab="pingpong" title="แลปเรียงลูกปิงปอง">
+                <span class="tab-icon">🏓</span>
+                <span>เรียงปิงปอง</span>
+            </button>
+            <button class="tab-btn" data-tab="holes" title="เจาะลึกชนิดช่องว่าง">
+                <span class="tab-icon">🕳️</span>
+                <span>ชนิดช่องว่าง</span>
+            </button>
+            <button class="tab-btn" data-tab="unitcells" title="ยูนิตเซลล์โลหะ">
+                <span class="tab-icon">🧊</span>
+                <span>ยูนิตเซลล์</span>
+            </button>
+            <button class="tab-btn" data-tab="ionic" title="สารประกอบไอออนิก">
+                <span class="tab-icon">💎</span>
+                <span>สารไอออนิก</span>
+            </button>
+        </div>
+
+        <!-- ================= PANEL 1: PING-PONG PACKING ================= -->
+        <div id="panel-pingpong" class="panel-section">
+            <div class="control-group">
+                <div class="group-title"><span>ลำดับการเรียงชั้น (Stacking Order)</span></div>
+                <div class="btn-row">
+                    <button id="btnHCP" class="btn-toggle-active">HCP (ABAB...)</button>
+                    <button id="btnFCC">FCC (ABCABC...)</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="group-title"><span>รูปแบบแพลูกปิงปอง</span></div>
+                <select id="pingpongClusterSelect">
+                    <option value="lab" selected>ชุดทดลองตามแลป (ฐาน 19 + หกเหลี่ยม 7 + สามเหลี่ยม 3)</option>
+                    <option value="full">ผลึกหกเหลี่ยมเต็ม (Full Grid: 19 + 12 + 12 ลูก)</option>
+                    <option value="single">เปรียบเทียบชั้นเดียว (1 Layer: Closest vs Simple Cubic)</option>
+                </select>
+            </div>
+
+            <div class="control-group" id="layerControlsGroup">
+                <div class="group-title"><span>ชั้นลูกปิงปอง (เปิด/ปิด ทีละชั้น)</span></div>
+                <div class="check-grid">
+                    <label class="check-item">
+                        <input type="checkbox" id="chkLayerA" checked>
+                        <span style="color:#38bdf8; font-weight:bold;">● ชั้นที่ 1 (A ฟ้า)</span>
+                    </label>
+                    <label class="check-item">
+                        <input type="checkbox" id="chkLayerB" checked>
+                        <span style="color:#fbbf24; font-weight:bold;">● ชั้นที่ 2 (B ทอง)</span>
+                    </label>
+                </div>
+                <div style="margin-top: 4px;">
+                    <label class="check-item">
+                        <input type="checkbox" id="chkLayerC" checked>
+                        <span id="labelLayer3" style="color:#38bdf8; font-weight:bold;">● ชั้นที่ 3 (A - ทับชั้น 1 พอดี)</span>
+                    </label>
+                </div>
+                <div class="slider-container" style="margin-top: 8px;">
+                    <label>
+                        <span>ระยะห่างแยกชั้น (Explode):</span>
+                        <span class="slider-val" id="valLayerSpacing">0%</span>
+                    </label>
+                    <div class="slider-row">
+                        <input type="range" id="sliderLayerSpacing" min="0" max="100" value="0">
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-group" id="holesToggleGroup">
+                <div class="group-title"><span>ไฮไลต์ช่องว่างในแพ (Show Holes)</span></div>
+                <div class="check-grid">
+                    <label class="check-item">
+                        <input type="checkbox" id="chkShowTHoles" checked>
+                        <span style="color:#d946ef; font-weight:bold;">◆ ช่อง T (ชมพู)</span>
+                    </label>
+                    <label class="check-item">
+                        <input type="checkbox" id="chkShowOHoles" checked>
+                        <span style="color:#ef4444; font-weight:bold;">◆ ช่อง O (แดงสด)</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 1 Layer Specific Controls -->
+            <div class="control-group" id="singleLayerGroup" style="display: none;">
+                <div class="group-title"><span>การจัดเรียงอนุภาค 1 ชั้น</span></div>
+                <div class="btn-row">
+                    <button id="btn1Closest" class="btn-toggle-active">Closest Packing</button>
+                    <button id="btn1Simple">Simple Cubic</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= PANEL 2: HOLES EXPLORER ================= -->
+        <div id="panel-holes" class="panel-section" style="display: none;">
+            <div class="control-group">
+                <div class="group-title"><span>เจาะลึกชนิดช่องว่าง (Isolated Void)</span></div>
+                <select id="holeTypeSelect">
+                    <option value="tetra">Tetrahedral Void (4 ทรงกลม)</option>
+                    <option value="octa">Octahedral Void (6 ทรงกลม)</option>
+                    <option value="cubic">Cubic Void (8 ทรงกลม)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <div class="slider-container">
+                    <label>
+                        <span>แยกลูกปิงปองออกจากศูนย์กลาง:</span>
+                        <span class="slider-val" id="valHoleExplode">0%</span>
+                    </label>
+                    <div class="slider-row">
+                        <input type="range" id="sliderHoleExplode" min="0" max="100" value="0">
+                    </div>
+                </div>
+                <div class="check-grid" style="margin-top: 4px;">
+                    <label class="check-item">
+                        <input type="checkbox" id="chkHolePolyhedron" checked>
+                        <span>แสดงรูปทรงเรขาคณิต 3D</span>
+                    </label>
+                    <label class="check-item">
+                        <input type="checkbox" id="chkHoleCentralSphere" checked>
+                        <span>แสดงทรงกลมแทรกในช่อง</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= PANEL 3: METALLIC UNIT CELLS ================= -->
+        <div id="panel-unitcells" class="panel-section" style="display: none;">
+            <div class="control-group">
+                <div class="group-title"><span>ยูนิตเซลล์โลหะ (Metallic Unit Cells)</span></div>
+                <select id="metallicSelect">
+                    <option value="sc">Simple Cubic (SC)</option>
+                    <option value="bcc">Body-Centred Cubic (BCC)</option>
+                    <option value="fcc" selected>Face-Centred Cubic (FCC)</option>
+                    <option value="hcp">Hexagonal Close-Packed (HCP)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <div class="group-title"><span>รูปแบบการแสดงผล</span></div>
+                <div class="btn-row">
+                    <button id="btnCellBallStick" class="btn-toggle-active">Ball & Stick</button>
+                    <button id="btnCellSpaceFill">Space-Filling</button>
+                </div>
+                <label class="check-item" style="margin-top:4px;">
+                    <input type="checkbox" id="chkShowUnitCellBox" checked>
+                    <span>แสดงกรอบยูนิตเซลล์ (Cell Box)</span>
+                </label>
+            </div>
+
+            <div class="control-group">
+                <div class="group-title"><span>ระนาบผลึก (Crystal Lattice Planes)</span></div>
+                <div class="btn-row-3">
+                    <button id="btnPlaneNone" class="btn-toggle-active">ปิด</button>
+                    <button id="btnPlane100">(100)</button>
+                    <button id="btnPlane110">(110)</button>
+                </div>
+                <button id="btnPlane111" style="margin-top:4px;">(111) ระนาบตัดเฉียง Closest Packed</button>
+            </div>
+
+            <div class="control-group">
+                <div class="slider-container">
+                    <label>
+                        <span>ขยายโครงสร้าง (Explode Unit Cell):</span>
+                        <span class="slider-val" id="valCellExplode">0%</span>
+                    </label>
+                    <div class="slider-row">
+                        <input type="range" id="sliderCellExplode" min="0" max="100" value="0">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= PANEL 4: IONIC CRYSTALS ================= -->
+        <div id="panel-ionic" class="panel-section" style="display: none;">
+            <div class="control-group">
+                <div class="group-title"><span>สารประกอบไอออนิก (Ionic Crystals)</span></div>
+                <select id="ionicSelect">
+                    <option value="nacl" selected>Rock Salt (NaCl) - Octahedral</option>
+                    <option value="cscl">Cesium Chloride (CsCl) - Cubic</option>
+                    <option value="zns">Zinc Blende (ZnS) - Tetrahedral 50%</option>
+                    <option value="caf2">Fluorite (CaF₂) - Tetrahedral 100%</option>
+                    <option value="catio3">Perovskite (CaTiO₃) - โครงสร้างสมัยใหม่</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <div class="group-title"><span>รูปแบบการแสดงผล</span></div>
+                <div class="btn-row">
+                    <button id="btnIonicBallStick" class="btn-toggle-active">Ball & Stick</button>
+                    <button id="btnIonicSpaceFill">Space-Filling</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="slider-container">
+                    <label>
+                        <span>ขยายโครงสร้างไอออน (Explode):</span>
+                        <span class="slider-val" id="valIonicExplode">0%</span>
+                    </label>
+                    <div class="slider-row">
+                        <input type="range" id="sliderIonicExplode" min="0" max="100" value="0">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Common Stats & Explanation Card -->
+        <div class="info-card">
+            <div class="info-row"><span class="info-label">โครงสร้าง / โมเดล:</span><span id="statName" class="info-value">HCP (ABAB...)</span></div>
+            <div class="info-row"><span class="info-label">เลขโคออร์ดิเนชัน (CN):</span><span id="statCN" class="info-value">12</span></div>
+            <div class="info-row"><span class="info-label">Packing Efficiency:</span><span id="statPE" class="info-value">74.08%</span></div>
+        </div>
+
+        <!-- Deep Explanation Box -->
+        <div class="explain-box" id="explainBox">
+            <!-- Dynamic explanation text -->
+        </div>
+
+        <!-- Legend -->
+        <div class="control-group">
+            <div class="group-title"><span>สัญลักษณ์สีอนุภาค (Color Legend)</span></div>
+            <div class="legend-list" id="legendContainer"></div>
+        </div>
+
+        <!-- Lab Cheat Sheet Modal Trigger Button -->
+        <button id="btnOpenCheatSheet" class="btn-primary" style="margin-top: auto; display:flex; align-items:center; justify-content:center; gap:8px;">
+            <span>📖</span>
+            <span>เปิดสรุปเนื้อหาแลป & เฉลยคำถามท้ายแลป</span>
+        </button>
+    </div>
+
+    <!-- ================= LAB CHEAT SHEET MODAL ================= -->
+    <div class="modal-overlay" id="cheatSheetModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📖 สรุปเนื้อหาแลปโครงสร้างผลึก & เฉลยคำถาม</h2>
+                <div class="close-btn" id="btnCloseCheatSheet">×</div>
+            </div>
+
+            <!-- Section 1 -->
+            <div>
+                <h3 style="color:#38bdf8; margin-bottom:8px;">1. การจัดเรียงอนุภาค 1 ชั้น (ตอนที่ 1 ก. หน้า 15)</h3>
+                <table class="lab-table">
+                    <tr>
+                        <th>คุณสมบัติ</th>
+                        <th>Closest Packing (เรียงสับหว่าง)</th>
+                        <th>Simple Cubic (เรียงตรงกัน)</th>
+                    </tr>
+                    <tr>
+                        <td>เลขโคออร์ดิเนชัน (CN) ใน 2 มิติ</td>
+                        <td><b>6</b> (ล้อมรอบ 6 ลูกรูปหกเหลี่ยม)</td>
+                        <td><b>4</b> (ล้อมรอบ 4 ลูกรูปสี่เหลี่ยม)</td>
+                    </tr>
+                    <tr>
+                        <td>รูปร่างช่องว่างระหว่างอนุภาค</td>
+                        <td><b>ช่องสามเหลี่ยม</b> (ชี้ขึ้นและชี้ลง)</td>
+                        <td><b>ช่องสี่เหลี่ยม</b> (Square hole)</td>
+                    </tr>
+                    <tr>
+                        <td>พื้นที่ว่าง (%)</td>
+                        <td><b>39.52%</b> (หนาแน่น 60.48%)</td>
+                        <td><b>47.62%</b> (หนาแน่น 52.38%)</td>
+                    </tr>
+                    <tr>
+                        <td>ชนิดช่องว่างเมื่อวางชั้นที่ 2</td>
+                        <td>ช่องเททระฮีดรัล และช่องออกตะฮีดรัล</td>
+                        <td>ช่องลูกบาศก์ (Cubic hole)</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Section 2 -->
+            <div>
+                <h3 style="color:#38bdf8; margin-bottom:8px;">2. เปรียบเทียบ Closest Packing: HCP vs FCC (ตอนที่ 1 ข. หน้า 16)</h3>
+                <table class="lab-table">
+                    <tr>
+                        <th>คุณสมบัติ</th>
+                        <th>HCP (Hexagonal Close-Packed)</th>
+                        <th>FCC (Face-Centred Cubic)</th>
+                    </tr>
+                    <tr>
+                        <td>ลำดับการเรียงชั้น (Stacking)</td>
+                        <td><b>ABABAB...</b> (ชั้น 3 ซ้อนทับชั้น 1)</td>
+                        <td><b>ABCABC...</b> (ชั้น 3 วางในช่อง C ไม่ทับชั้น 1)</td>
+                    </tr>
+                    <tr>
+                        <td>ตำแหน่งลูกปิงปองชั้นที่ 3</td>
+                        <td>ตรงกับลูกปิงปองชั้นที่ 1 พอดี</td>
+                        <td>วางบน <b>ช่องออกตะฮีดรัล (Octahedral Hole)</b> ของชั้น 1-2</td>
+                    </tr>
+                    <tr>
+                        <td>เลขโคออร์ดิเนชัน (CN)</td>
+                        <td><b>12</b> (6 ในชั้น + 3 บน + 3 ล่าง)</td>
+                        <td><b>12</b> (6 ในชั้น + 3 บน + 3 ล่าง)</td>
+                    </tr>
+                    <tr>
+                        <td>ความหนาแน่นของการจัดเรียง (PE)</td>
+                        <td><b>74.08%</b> (ช่องว่าง 25.92%)</td>
+                        <td><b>74.08%</b> (ช่องว่าง 25.92%)</td>
+                    </tr>
+                    <tr>
+                        <td>มุมมอง Top View (ตามแลปหน้า 16)</td>
+                        <td>ชั้น 1 และ 3 <b>ซ้อนทับกันพอดี</b> ลูกบอลยอดชี้ทิศเดียวกัน</td>
+                        <td>ชั้น 1, 2, 3 <b>สลับกันไม่ทับกัน</b> ลูกบอลยอดชี้กลับด้าน 180°</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Section 3 -->
+            <div>
+                <h3 style="color:#38bdf8; margin-bottom:8px;">3. สรุปชนิดช่องว่าง (Voids) ในโครงสร้างผลึก</h3>
+                <table class="lab-table">
+                    <tr>
+                        <th>ชนิดช่องว่าง</th>
+                        <th>จำนวนทรงกลมที่ล้อมรอบ</th>
+                        <th>อัตราส่วนรัศมี r<sub>void</sub> / R</th>
+                        <th>จำนวนช่องต่อ N อนุภาค</th>
+                        <th>ตัวอย่างสารประกอบ</th>
+                    </tr>
+                    <tr>
+                        <td><b>Tetrahedral Hole (T)</b></td>
+                        <td>4 ลูก (ทรงสี่หน้า)</td>
+                        <td><b>0.225</b></td>
+                        <td><b>2N</b> ช่อง (2 เท่าของจำนวนอะตอม)</td>
+                        <td>ZnS (ครึ่งเดียว), CaF₂ (ครบ 8 ช่อง)</td>
+                    </tr>
+                    <tr>
+                        <td><b>Octahedral Hole (O)</b></td>
+                        <td>6 ลูก (ทรงแปดหน้า)</td>
+                        <td><b>0.414</b></td>
+                        <td><b>N</b> ช่อง (เท่ากับจำนวนอะตอม)</td>
+                        <td>NaCl (Rock Salt), FeO</td>
+                    </tr>
+                    <tr>
+                        <td><b>Cubic Hole</b></td>
+                        <td>8 ลูก (ทรงลูกบาศก์)</td>
+                        <td><b>0.732</b></td>
+                        <td>1 ช่องต่อ Simple Cubic</td>
+                        <td>CsCl (Cesium Chloride)</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Section 4 -->
+            <div>
+                <h3 style="color:#38bdf8; margin-bottom:8px;">4. เฉลยคำถามท้ายการทดลอง (Questions & Answers)</h3>
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    <div class="qa-card">
+                        <h4>ข้อ 1: จงเปรียบเทียบความแตกต่างระหว่างโครงสร้างแบบ HCP และ FCC</h4>
+                        <p><b>คำตอบ:</b> โครงสร้างทั้งสองแบบเป็น <b>Closest Packing (ความหนาแน่นสูงสุด 74.08%, CN = 12)</b> เหมือนกัน แต่ต่างกันที่ลำดับการซ้อนทับชั้น:
+                        <br>• <b>HCP</b> เรียงแบบ <b>ABAB...</b> โดยชั้นที่ 3 จะวางตรงกับชั้นที่ 1 พอดี ยูนิตเซลล์เป็นแบบหกเหลี่ยม
+                        <br>• <b>FCC</b> เรียงแบบ <b>ABCABC...</b> โดยชั้นที่ 3 จะวางบนช่องว่าง Octahedral ไม่ตรงกับชั้นที่ 1 หรือ 2 ชั้นที่ 4 จึงจะตรงกับชั้นที่ 1 ยูนิตเซลล์เป็นแบบลูกบาศก์มีอะตอมที่มุมและกลางหน้าทั้ง 6 หน้า</p>
+                    </div>
+
+                    <div class="qa-card">
+                        <h4>ข้อ 2: ถ้ามีอนุภาคทรงกลม N ลูก จัดเรียงแบบชิดที่สุด จะเกิดช่องเททระฮีดรัลและออกตะฮีดรัลกี่ช่อง?</h4>
+                        <p><b>คำตอบ:</b> จะเกิดช่องว่าง 2 ชนิด ดังนี้:
+                        <br>• <b>ช่องเททระฮีดรัล (Tetrahedral holes)</b> = <b>2N ช่อง</b> (เป็นสองเท่าของจำนวนอนุภาค)
+                        <br>• <b>ช่องออกตะฮีดรัล (Octahedral holes)</b> = <b>N ช่อง</b> (เท่ากับจำนวนอนุภาคพอดี)</p>
+                    </div>
+
+                    <div class="qa-card">
+                        <h4>ข้อ 3: ในโครงสร้าง NaCl, ZnS, CaF₂ ไอออนบวกบรรจุอยู่ในช่องว่างชนิดใดและในสัดส่วนเท่าใด?</h4>
+                        <p><b>คำตอบ:</b>
+                        <br>• <b>NaCl:</b> Cl<sup>-</sup> เรียงแบบ FCC, Na<sup>+</sup> บรรจุใน <b>ช่อง Octahedral ทั้งหมด (100% หรือ N ช่อง)</b> อัตราส่วน 1:1
+                        <br>• <b>ZnS:</b> S<sup>2-</sup> เรียงแบบ FCC, Zn<sup>2+</sup> บรรจุใน <b>ช่อง Tetrahedral เพียงครึ่งเดียว (50% หรือ 4 ใน 8 ช่อง)</b> สลับเว้นช่อง อัตราส่วน 1:1
+                        <br>• <b>CaF₂:</b> Ca<sup>2+</sup> เรียงแบบ FCC, F<sup>-</sup> บรรจุใน <b>ช่อง Tetrahedral ครบทั้ง 8 ช่อง (100%)</b> อัตราส่วน Ca<sup>2+</sup> : F<sup>-</sup> = 1 : 2</p>
+                    </div>
+
+                    <div class="qa-card">
+                        <h4>ข้อ 4: เทคนิคการทดลองใดที่ใช้ในการระบุโครงสร้างผลึกในระดับอะตอม?</h4>
+                        <p><b>คำตอบ:</b> เทคนิค <b>X-ray Diffraction (XRD) หรือการเลี้ยวเบนรังสีเอกซ์</b> ตามกฎของแบร็กก์ (<i>n</i>&lambda; = 2<i>d</i> sin&theta;) ทำให้สามารถคำนวณระยะห่างระหว่างระนาบผลึก (<i>d</i>-spacing) ขนาด และรูปร่างของยูนิตเซลล์ได้อย่างแม่นยำ</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= CRYSTAL CALCULATOR MODAL ================= -->
+    <div class="modal-overlay" id="calcModal">
+        <div class="modal-content" style="max-width: 680px;">
+            <div class="modal-header">
+                <h2>🧮 เครื่องคำนวณโครงสร้างผลึก (Crystallography Calculator)</h2>
+                <div class="close-btn" id="btnCloseCalc">×</div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:14px;">
+                <!-- Calculator 1: Radius vs Edge length -->
+                <div class="qa-card">
+                    <h4>1. คำนวณความยาวขอบยูนิตเซลล์ (a) จากรัศมีอะตอม (r)</h4>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:8px;">
+                        <div>
+                            <label style="margin-bottom:4px; display:block;">ชนิดยูนิตเซลล์:</label>
+                            <select id="calcLatticeType" style="width:100%;">
+                                <option value="sc">Simple Cubic (a = 2r)</option>
+                                <option value="bcc">Body-Centred Cubic (a = 4r / √3)</option>
+                                <option value="fcc" selected>Face-Centred Cubic (a = 2√2 r)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="margin-bottom:4px; display:block;">รัศมีอะตอม r (pm หรือ Å):</label>
+                            <input type="number" id="calcRadius" value="144" style="width:100%; padding:8px; border-radius:8px; border:1px solid #334155; background:#0f172a; color:white;">
+                        </div>
+                    </div>
+                    <div style="margin-top:10px; padding:10px; background:#090d16; border-radius:8px; border:1px solid var(--border-color);">
+                        <div style="color:var(--text-secondary); font-size:0.82rem;">ผลลัพธ์:</div>
+                        <div style="font-size:1.15rem; color:var(--accent-cyan); font-weight:700; margin-top:4px;" id="calcResultA">
+                            a = 407.29 pm | ปริมาตรเซลล์ V = 67.56 × 10⁶ pm³
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Calculator 2: Radius Ratio Predictor -->
+                <div class="qa-card">
+                    <h4>2. ทำนายชนิดช่องว่างและรูปร่างผลึกไอออนิกจากอัตราส่วนรัศมี (r⁺ / r⁻)</h4>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:8px;">
+                        <div>
+                            <label style="margin-bottom:4px; display:block;">รัศมีไอออนบวก r⁺ (pm):</label>
+                            <input type="number" id="calcCationR" value="102" style="width:100%; padding:8px; border-radius:8px; border:1px solid #334155; background:#0f172a; color:white;">
+                        </div>
+                        <div>
+                            <label style="margin-bottom:4px; display:block;">รัศมีไอออนลบ r⁻ (pm):</label>
+                            <input type="number" id="calcAnionR" value="181" style="width:100%; padding:8px; border-radius:8px; border:1px solid #334155; background:#0f172a; color:white;">
+                        </div>
+                    </div>
+                    <div style="margin-top:10px; padding:10px; background:#090d16; border-radius:8px; border:1px solid var(--border-color);">
+                        <div style="color:var(--text-secondary); font-size:0.82rem;">ผลการทำนาย:</div>
+                        <div style="font-size:1.05rem; color:var(--accent-emerald); font-weight:700; margin-top:4px;" id="calcResultRatio">
+                            r⁺/r⁻ = 0.564 ➔ ช่อง Octahedral (CN = 6) โครงสร้างแบบ NaCl
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= LAB QUIZ MODAL ================= -->
+    <div class="modal-overlay" id="quizModal">
+        <div class="modal-content" style="max-width: 720px;">
+            <div class="modal-header">
+                <h2>📝 แบบทดสอบความเข้าใจแลปโครงสร้างผลึก</h2>
+                <div class="close-btn" id="btnCloseQuiz">×</div>
+            </div>
+            <div id="quizContainer" style="display:flex; flex-direction:column; gap:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; color:var(--text-secondary); font-size:0.88rem;">
+                    <span id="quizProgress">ข้อที่ 1 / 5</span>
+                    <span id="quizScoreText" style="color:var(--accent-cyan); font-weight:bold;">คะแนน: 0</span>
+                </div>
+                <div class="qa-card" style="border-left-color:var(--accent-cyan);">
+                    <h3 id="quizQuestion" style="font-size:1.05rem; color:white;">คำถามจะแสดงที่นี่</h3>
+                </div>
+                <div id="quizOptions" style="display:flex; flex-direction:column; gap:8px;">
+                    <!-- Quiz options generated dynamically -->
+                </div>
+                <div id="quizFeedback" style="display:none; padding:12px; border-radius:8px; font-size:0.88rem; line-height:1.5;"></div>
+                <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:6px;">
+                    <button id="btnNextQuiz" class="btn-primary" style="display:none;">ข้อถัดไป ➔</button>
+                    <button id="btnRestartQuiz" class="btn-secondary" style="display:none;">ทำใหม่อีกครั้ง 🔄</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Toast Message -->
+    <div id="toast">
+        <span id="toastIcon">✨</span>
+        <span id="toastMsg">แจ้งเตือน</span>
+    </div>
+
+    <!-- ================= THREE.JS APPLICATION SCRIPT ================= -->
+    <script>
+        // --- 1. Scene & Setup ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        
+        let isLightMode = false;
+        const darkBgColor = new THREE.Color(0x070b14);
+        const lightBgColor = new THREE.Color(0xf1f5f9);
+        scene.background = darkBgColor;
+
+        const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 150);
+        camera.position.set(0, 10, 16);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, preserveDrawingBuffer: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        // OrbitControls
+        let controls;
+        if (typeof THREE.OrbitControls !== 'undefined') {
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.06;
+            controls.maxDistance = 50;
+            controls.minDistance = 2;
+        }
+
+        // Lighting System with Rim Lighting for Crisp Depth
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+
+        // Main key light
+        const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.95);
+        dirLight1.position.set(12, 22, 16);
+        dirLight1.castShadow = true;
+        dirLight1.shadow.mapSize.width = 1024;
+        dirLight1.shadow.mapSize.height = 1024;
+        scene.add(dirLight1);
+
+        // Fill light (Cool Cyan fill)
+        const dirLight2 = new THREE.DirectionalLight(0x38bdf8, 0.4);
+        dirLight2.position.set(-15, -10, -10);
+        scene.add(dirLight2);
+
+        // Back Rim Light (Makes sphere edges silhouette sharply!)
+        const rimLight = new THREE.DirectionalLight(0xffffff, 0.55);
+        rimLight.position.set(-12, 16, -14);
+        scene.add(rimLight);
+
+        // Root Group
+        const sceneGroup = new THREE.Group();
+        scene.add(sceneGroup);
+
+        // Coordinate Axes Helper
+        const axesHelper = new THREE.AxesHelper(3.5);
+        axesHelper.visible = false;
+        scene.add(axesHelper);
+
+        // State Machine
+        const state = {
+            currentTab: 'pingpong', // pingpong | holes | unitcells | ionic
+            stacking: 'hcp', // hcp | fcc
+            pingpongCluster: 'lab', // lab | full | single
+            singleLayerType: 'closest', // closest | simple
+            layerA: true,
+            layerB: true,
+            layerC: true,
+            layerSpacing: 0.0, // 0 to 1
+            showTHoles: true,
+            showOHoles: true,
+            holeType: 'tetra', // tetra | octa | cubic
+            holeExplode: 0.0,
+            showHolePolyhedron: true,
+            showHoleCentralSphere: true,
+            metallicType: 'fcc', // sc | bcc | fcc | hcp
+            metallicStyle: 'stick', // stick | fill
+            showCellBox: true,
+            currentPlane: 'none', // none | 100 | 110 | 111
+            cellExplode: 0.0,
+            ionicType: 'nacl', // nacl | cscl | zns | caf2 | catio3
+            ionicStyle: 'stick', // stick | fill
+            ionicExplode: 0.0,
+            autoRotate: false,
+            showAxes: false
+        };
+
+        // Standard Material Factory (High-Contrast, Clear Distinct Colors)
+        const materials = {
+            // Layer A: ฟ้าสดใส (Electric Cyan)
+            pingpongA: new THREE.MeshStandardMaterial({ color: 0x0ea5e9, roughness: 0.28, metalness: 0.08 }),
+            // Layer B: เหลืองทองชัดเจน (Golden Amber - Distinct from red!)
+            pingpongB: new THREE.MeshStandardMaterial({ color: 0xfbbf24, roughness: 0.28, metalness: 0.08 }),
+            // Layer C: เขียวมรกตสด (Emerald Green)
+            pingpongC: new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.28, metalness: 0.08 }),
+            // Tetrahedral Void: ม่วงชมพูสด (Vibrant Magenta)
+            tetraHole: new THREE.MeshStandardMaterial({ color: 0xd946ef, emissive: 0xa21caf, emissiveIntensity: 0.45, roughness: 0.2 }),
+            // Octahedral Void: แดงสดใส คอนทราสต์จัด ไม่ปนกับสีเหลือง B (Bright Crimson Red)
+            octaHole: new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xb91c1c, emissiveIntensity: 0.45, roughness: 0.2 }),
+            // Cubic Void: ม่วงครามสด (Vibrant Purple)
+            cubicHole: new THREE.MeshStandardMaterial({ color: 0x8b5cf6, emissive: 0x6d28d9, emissiveIntensity: 0.45, roughness: 0.2 }),
+            // Polyhedron Faces
+            polyhedronTetra: new THREE.MeshStandardMaterial({ color: 0xd946ef, transparent: true, opacity: 0.32, side: THREE.DoubleSide }),
+            polyhedronOcta: new THREE.MeshStandardMaterial({ color: 0xef4444, transparent: true, opacity: 0.32, side: THREE.DoubleSide }),
+            polyhedronCube: new THREE.MeshStandardMaterial({ color: 0x8b5cf6, transparent: true, opacity: 0.28, side: THREE.DoubleSide }),
+            // Wireframes & Lines
+            wireframe: new THREE.LineBasicMaterial({ color: 0xe2e8f0, transparent: true, opacity: 0.85 }),
+            accentWire: new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 2 }),
+            bondStick: new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.3, metalness: 0.2 }),
+            // Ionic Crystals
+            ionCl: new THREE.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.28, metalness: 0.1 }), // เขียวสด Cl-
+            ionNa: new THREE.MeshStandardMaterial({ color: 0xa855f7, roughness: 0.28, metalness: 0.1 }), // ม่วง Na+
+            ionCs: new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.28, metalness: 0.1 }), // แดง Cs+
+            ionS: new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.28, metalness: 0.1 }),  // เหลือง S2-
+            ionZn: new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.28, metalness: 0.1 }), // ฟ้าคราม Zn2+
+            ionCa: new THREE.MeshStandardMaterial({ color: 0x4f46e5, roughness: 0.28, metalness: 0.1 }), // น้ำเงินคราม Ca2+
+            ionF: new THREE.MeshStandardMaterial({ color: 0x14b8a6, roughness: 0.28, metalness: 0.1 }),  // มิ้นต์ทีล F-
+            ionTi: new THREE.MeshStandardMaterial({ color: 0xf43f5e, roughness: 0.28, metalness: 0.1 }), // กุหลาบแดง Ti4+
+            ionO: new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.28, metalness: 0.1 }),  // ฟ้า O2-
+            gridUnitLine: new THREE.LineBasicMaterial({ color: 0xef4444, linewidth: 3 }),
+            plane100: new THREE.MeshStandardMaterial({ color: 0x06b6d4, transparent: true, opacity: 0.4, side: THREE.DoubleSide }),
+            plane110: new THREE.MeshStandardMaterial({ color: 0xec4899, transparent: true, opacity: 0.4, side: THREE.DoubleSide }),
+            plane111: new THREE.MeshStandardMaterial({ color: 0x10b981, transparent: true, opacity: 0.4, side: THREE.DoubleSide })
+        };
+
+        function clearScene() {
+            while (sceneGroup.children.length > 0) {
+                const obj = sceneGroup.children[0];
+                sceneGroup.remove(obj);
+            }
+        }
+
+        // Create Sphere with metadata for interactive raycasting
+        function createSphere(x, y, z, radius, material, metadata = null) {
+            const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 32, 32), material);
+            mesh.position.set(x, y, z);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            if (metadata) {
+                mesh.userData = metadata;
+            }
+            return mesh;
+        }
+
+        // Create Cylinder Bond between two 3D vectors
+        function createCylinderBond(p1, p2, radius, material) {
+            const dir = new THREE.Vector3().subVectors(p2, p1);
+            const len = dir.length();
+            const geo = new THREE.CylinderGeometry(radius, radius, len, 14);
+            const mesh = new THREE.Mesh(geo, material);
+            const mid = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+            mesh.position.copy(mid);
+            mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+            mesh.castShadow = true;
+            return mesh;
+        }
+
+        // ================= MATHEMATICAL GENERATION =================
+        const R = 1.0;
+        const LAYER_H = Math.sqrt(8.0 / 3.0) * R;
+
+        function getHexCluster(radiusSteps) {
+            const points = [];
+            const a1 = [2.0 * R, 0.0];
+            const a2 = [1.0 * R, Math.sqrt(3.0) * R];
+            for (let q = -radiusSteps; q <= radiusSteps; q++) {
+                const r1 = Math.max(-radiusSteps, -q - radiusSteps);
+                const r2 = Math.min(radiusSteps, -q + radiusSteps);
+                for (let r = r1; r <= r2; r++) {
+                    const x = q * a1[0] + r * a2[0];
+                    const y = q * a1[1] + r * a2[1];
+                    points.push({ x, y });
+                }
+            }
+            return points;
+        }
+
+        // --- Render Ping-Pong Packing ---
+        function renderPingPongPacking() {
+            clearScene();
+            const explode = state.layerSpacing * 2.8;
+
+            if (state.pingpongCluster === 'single') {
+                renderSingleLayer();
+                return;
+            }
+
+            const isLabSetup = (state.pingpongCluster === 'lab');
+            const isHCP = (state.stacking === 'hcp');
+
+            const zA = 0;
+            const zB = LAYER_H + explode;
+            const zC = (LAYER_H * 2.0) + (explode * 2.0);
+
+            const shiftB = { x: 1.0 * R, y: (Math.sqrt(3.0) / 3.0) * R };
+            const shiftC = { x: 0.0, y: (2.0 * Math.sqrt(3.0) / 3.0) * R };
+
+            // Layer 1 (A)
+            const layer1Coords = getHexCluster(2);
+
+            // Layer 2 (B)
+            let layer2Coords = [];
+            if (isLabSetup) {
+                const hex7 = getHexCluster(1);
+                layer2Coords = hex7.map(p => ({ x: p.x + shiftB.x, y: p.y + shiftB.y }));
+            } else {
+                const allA = getHexCluster(2);
+                layer2Coords = allA.map(p => ({ x: p.x + shiftB.x, y: p.y + shiftB.y }))
+                    .filter(p => Math.sqrt(p.x * p.x + p.y * p.y) < 3.2);
+            }
+
+            // Layer 3 (A for HCP, C for FCC)
+            let layer3Coords = [];
+            if (isLabSetup) {
+                const circR = (2.0 * R) / Math.sqrt(3.0);
+                if (isHCP) {
+                    const angles = [Math.PI / 2, Math.PI / 2 + (2 * Math.PI / 3), Math.PI / 2 + (4 * Math.PI / 3)];
+                    layer3Coords = angles.map(ang => ({
+                        x: shiftB.x + circR * Math.cos(ang),
+                        y: shiftB.y + circR * Math.sin(ang)
+                    }));
+                } else {
+                    const angles = [-Math.PI / 2, -Math.PI / 2 + (2 * Math.PI / 3), -Math.PI / 2 + (4 * Math.PI / 3)];
+                    layer3Coords = angles.map(ang => ({
+                        x: shiftB.x + circR * Math.cos(ang),
+                        y: shiftB.y + circR * Math.sin(ang)
+                    }));
+                }
+            } else {
+                if (isHCP) {
+                    layer3Coords = getHexCluster(1);
+                } else {
+                    const allA = getHexCluster(2);
+                    layer3Coords = allA.map(p => ({ x: p.x + shiftC.x, y: p.y + shiftC.y }))
+                        .filter(p => Math.sqrt(p.x * p.x + p.y * p.y) < 2.8);
+                }
+            }
+
+            const groupA = new THREE.Group();
+            const groupB = new THREE.Group();
+            const groupC = new THREE.Group();
+
+            if (state.layerA) {
+                layer1Coords.forEach(p => {
+                    const mesh = createSphere(p.x, zA, p.y, R, materials.pingpongA, {
+                        title: 'ลูกปิงปอง ชั้นที่ 1 (A ฟ้า)',
+                        pos: `(${p.x.toFixed(1)}, 0, ${p.y.toFixed(1)})`,
+                        frac: 'ฐานชั้นที่ 1',
+                        role: 'จัดเรียงแบบชิดที่สุด (Closest packing) ในระนาบ 2D'
+                    });
+                    groupA.add(mesh);
+                });
+            }
+
+            if (state.layerB) {
+                layer2Coords.forEach(p => {
+                    const mesh = createSphere(p.x, zB, p.y, R, materials.pingpongB, {
+                        title: 'ลูกปิงปอง ชั้นที่ 2 (B เหลืองทอง)',
+                        pos: `(${p.x.toFixed(1)}, ${(zB).toFixed(1)}, ${p.y.toFixed(1)})`,
+                        frac: 'ชั้นกลาง (B-site)',
+                        role: 'วางในรอยบุ๋ม (Depression) ของชั้นที่ 1'
+                    });
+                    groupB.add(mesh);
+                });
+            }
+
+            if (state.layerC) {
+                const matC = isHCP ? materials.pingpongA : materials.pingpongC;
+                const layerName = isHCP ? 'ชั้นที่ 3 (A ฟ้า - ทับชั้น 1 พอดี)' : 'ชั้นที่ 3 (C เขียว - สลับทิศ 180°)';
+                layer3Coords.forEach(p => {
+                    const mesh = createSphere(p.x, zC, p.y, R, matC, {
+                        title: `ลูกปิงปอง ${layerName}`,
+                        pos: `(${p.x.toFixed(1)}, ${(zC).toFixed(1)}, ${p.y.toFixed(1)})`,
+                        frac: isHCP ? 'ทับแนว A ตรงกันพอดี' : 'วางบนรอยบุ๋ม C (Octahedral)',
+                        role: isHCP ? 'ทำให้เกิดโครงสร้าง HCP (ABAB...)' : 'ทำให้เกิดโครงสร้าง FCC (ABCABC...)'
+                    });
+                    groupC.add(mesh);
+                });
+            }
+
+            sceneGroup.add(groupA);
+            sceneGroup.add(groupB);
+            sceneGroup.add(groupC);
+
+            // Render Holes Markers if enabled
+            if (state.layerA && state.layerB) {
+                const holesGroup = new THREE.Group();
+                const h12 = zB - zA;
+
+                if (state.showTHoles) {
+                    layer2Coords.forEach(p => {
+                        const tMesh = createSphere(p.x, zA + (h12 * 0.25), p.y, 0.24, materials.tetraHole, {
+                            title: 'ช่องว่าง Tetrahedral (T ชมพู)',
+                            pos: `(${p.x.toFixed(1)}, ${(zA + h12*0.25).toFixed(1)}, ${p.y.toFixed(1)})`,
+                            frac: 'CN = 4 (ล้อมด้วย 4 ลูก)',
+                            role: 'เกิดจาก 3 ลูกล่าง + 1 ลูกบน ขนาด r = 0.225 R'
+                        });
+                        holesGroup.add(tMesh);
+                    });
+                    layer1Coords.filter(p => Math.sqrt(p.x * p.x + p.y * p.y) < 2.5).forEach(p => {
+                        const tMesh = createSphere(p.x, zA + (h12 * 0.75), p.y, 0.24, materials.tetraHole, {
+                            title: 'ช่องว่าง Tetrahedral (T ชมพู)',
+                            pos: `(${p.x.toFixed(1)}, ${(zA + h12*0.75).toFixed(1)}, ${p.y.toFixed(1)})`,
+                            frac: 'CN = 4 (ล้อมด้วย 4 ลูก)',
+                            role: 'เกิดจาก 1 ลูกล่าง + 3 ลูกบน ขนาด r = 0.225 R'
+                        });
+                        holesGroup.add(tMesh);
+                    });
+                }
+
+                if (state.showOHoles) {
+                    const oSites = [
+                        { x: shiftC.x, y: shiftC.y },
+                        { x: shiftC.x + 2.0, y: shiftC.y },
+                        { x: shiftC.x - 2.0, y: shiftC.y },
+                        { x: shiftC.x + 1.0, y: shiftC.y + Math.sqrt(3.0) },
+                        { x: shiftC.x - 1.0, y: shiftC.y + Math.sqrt(3.0) },
+                        { x: shiftC.x + 1.0, y: shiftC.y - Math.sqrt(3.0) },
+                        { x: shiftC.x - 1.0, y: shiftC.y - Math.sqrt(3.0) }
+                    ];
+                    oSites.forEach(p => {
+                        const oMesh = createSphere(p.x, zA + (h12 * 0.5), p.y, 0.38, materials.octaHole, {
+                            title: 'ช่องว่าง Octahedral (O แดงสด)',
+                            pos: `(${p.x.toFixed(1)}, ${(zA + h12*0.5).toFixed(1)}, ${p.y.toFixed(1)})`,
+                            frac: 'CN = 6 (ล้อมด้วย 6 ลูก)',
+                            role: 'เกิดจาก 3 ลูกล่าง + 3 ลูกบนคว่ำสลับกัน ขนาด r = 0.414 R'
+                        });
+                        holesGroup.add(oMesh);
+                    });
+                }
+                sceneGroup.add(holesGroup);
+            }
+
+            sceneGroup.position.set(-shiftB.x / 2, -LAYER_H, -shiftB.y / 2);
+            updateUIInfo();
+        }
+
+        // --- Render 1 Layer Packing ---
+        function renderSingleLayer() {
+            clearScene();
+            sceneGroup.position.set(0, 0, 0);
+
+            if (state.singleLayerType === 'closest') {
+                const rows = 4;
+                const cols = 5;
+                for (let r = 0; r < rows; r++) {
+                    const offsetX = (r % 2 === 1) ? 1.0 * R : 0;
+                    for (let c = 0; c < cols; c++) {
+                        const x = (c * 2.0 * R) + offsetX - 4.5;
+                        const z = (r * Math.sqrt(3.0) * R) - 2.5;
+                        const sphere = createSphere(x, 0, z, R, materials.pingpongA, {
+                            title: 'Closest Packing (1 ชั้น ฟ้า)',
+                            pos: `(${x.toFixed(1)}, 0, ${z.toFixed(1)})`,
+                            frac: 'CN = 6 ในระนาบ',
+                            role: 'เรียงสับหว่าง เกิดช่องว่างสามเหลี่ยม พื้นที่ว่าง 39.52%'
+                        });
+                        sceneGroup.add(sphere);
+                    }
+                }
+
+                // Parallelogram Unit Cell ABCD
+                const pts = [
+                    new THREE.Vector3(-2.5, 0.05, -2.5),
+                    new THREE.Vector3(-0.5, 0.05, -2.5),
+                    new THREE.Vector3(0.5, 0.05, -2.5 + Math.sqrt(3.0)),
+                    new THREE.Vector3(-1.5, 0.05, -2.5 + Math.sqrt(3.0)),
+                    new THREE.Vector3(-2.5, 0.05, -2.5)
+                ];
+                const geo = new THREE.BufferGeometry().setFromPoints(pts);
+                const line = new THREE.Line(geo, materials.gridUnitLine);
+                sceneGroup.add(line);
+
+            } else {
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 5; c++) {
+                        const x = (c * 2.0 * R) - 4.0;
+                        const z = (r * 2.0 * R) - 3.0;
+                        const sphere = createSphere(x, 0, z, R, materials.pingpongB, {
+                            title: 'Simple Cubic (1 ชั้น เหลืองทอง)',
+                            pos: `(${x.toFixed(1)}, 0, ${z.toFixed(1)})`,
+                            frac: 'CN = 4 ในระนาบ',
+                            role: 'เรียงตรงกัน เกิดช่องว่างสี่เหลี่ยม พื้นที่ว่าง 47.62%'
+                        });
+                        sceneGroup.add(sphere);
+                    }
+                }
+
+                // Square Unit Cell
+                const pts = [
+                    new THREE.Vector3(-2.0, 0.05, -1.0),
+                    new THREE.Vector3(0.0, 0.05, -1.0),
+                    new THREE.Vector3(0.0, 0.05, 1.0),
+                    new THREE.Vector3(-2.0, 0.05, 1.0),
+                    new THREE.Vector3(-2.0, 0.05, -1.0)
+                ];
+                const geo = new THREE.BufferGeometry().setFromPoints(pts);
+                const line = new THREE.Line(geo, materials.gridUnitLine);
+                sceneGroup.add(line);
+            }
+            updateUIInfo();
+        }
+
+        // --- Render Isolated Holes ---
+        function renderIsolatedHoles() {
+            clearScene();
+            sceneGroup.position.set(0, 0, 0);
+
+            const exp = state.holeExplode * 1.5;
+
+            if (state.holeType === 'tetra') {
+                const circR = (2.0 * R) / Math.sqrt(3.0);
+                const h = Math.sqrt(8.0 / 3.0) * R;
+
+                const v1 = new THREE.Vector3(0, -h / 4, circR);
+                const v2 = new THREE.Vector3(circR * Math.cos(Math.PI / 2 + 2 * Math.PI / 3), -h / 4, circR * Math.sin(Math.PI / 2 + 2 * Math.PI / 3));
+                const v3 = new THREE.Vector3(circR * Math.cos(Math.PI / 2 + 4 * Math.PI / 3), -h / 4, circR * Math.sin(Math.PI / 2 + 4 * Math.PI / 3));
+                const v4 = new THREE.Vector3(0, (3 * h) / 4, 0);
+
+                const verts = [v1, v2, v3, v4];
+
+                verts.forEach((v, idx) => {
+                    const dir = v.clone().normalize();
+                    const pos = v.clone().add(dir.multiplyScalar(exp));
+                    const mat = (idx === 3) ? materials.pingpongB : materials.pingpongA;
+                    const sphere = createSphere(pos.x, pos.y, pos.z, R, mat, {
+                        title: `ลูกปิงปองจุดยอดที่ ${idx+1}`,
+                        pos: `(${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)})`,
+                        frac: 'ทรงกลมล้อมรอบช่องว่าง (CN=4)',
+                        role: (idx === 3) ? 'ลูกยอดด้านบน (เหลืองทอง)' : 'ลูกฐานด้านล่าง (ฟ้า)'
+                    });
+                    sceneGroup.add(sphere);
+                });
+
+                if (state.showHoleCentralSphere) {
+                    const holeSphere = createSphere(0, 0, 0, 0.225 * R, materials.tetraHole, {
+                        title: 'อนุภาคแทรกในช่อง Tetrahedral (ชมพู)',
+                        pos: '(0, 0, 0)',
+                        frac: 'ขนาดพอดี r = 0.225 R',
+                        role: 'สัมผัสกับทรงกลมใหญ่ทั้ง 4 ลูกพร้อมกัน (CN = 4)'
+                    });
+                    sceneGroup.add(holeSphere);
+                }
+
+                if (state.showHolePolyhedron) {
+                    const tetraGeo = new THREE.BufferGeometry();
+                    const vertices = new Float32Array([
+                        v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v3.x, v3.y, v3.z,
+                        v1.x, v1.y, v1.z, v4.x, v4.y, v4.z, v2.x, v2.y, v2.z,
+                        v2.x, v2.y, v2.z, v4.x, v4.y, v4.z, v3.x, v3.y, v3.z,
+                        v3.x, v3.y, v3.z, v4.x, v4.y, v4.z, v1.x, v1.y, v1.z
+                    ]);
+                    tetraGeo.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+                    tetraGeo.computeVertexNormals();
+
+                    const mesh = new THREE.Mesh(tetraGeo, materials.polyhedronTetra);
+                    const wire = new THREE.LineSegments(new THREE.WireframeGeometry(tetraGeo), materials.wireframe);
+                    sceneGroup.add(mesh);
+                    sceneGroup.add(wire);
+                }
+
+            } else if (state.holeType === 'octa') {
+                const circR = (2.0 * R) / Math.sqrt(3.0);
+                const halfH = Math.sqrt(2.0 / 3.0) * R;
+
+                const b1 = new THREE.Vector3(circR * Math.cos(Math.PI / 2), -halfH, circR * Math.sin(Math.PI / 2));
+                const b2 = new THREE.Vector3(circR * Math.cos(Math.PI / 2 + 2 * Math.PI / 3), -halfH, circR * Math.sin(Math.PI / 2 + 2 * Math.PI / 3));
+                const b3 = new THREE.Vector3(circR * Math.cos(Math.PI / 2 + 4 * Math.PI / 3), -halfH, circR * Math.sin(Math.PI / 2 + 4 * Math.PI / 3));
+
+                const t1 = new THREE.Vector3(circR * Math.cos(-Math.PI / 2), halfH, circR * Math.sin(-Math.PI / 2));
+                const t2 = new THREE.Vector3(circR * Math.cos(-Math.PI / 2 + 2 * Math.PI / 3), halfH, circR * Math.sin(-Math.PI / 2 + 2 * Math.PI / 3));
+                const t3 = new THREE.Vector3(circR * Math.cos(-Math.PI / 2 + 4 * Math.PI / 3), halfH, circR * Math.sin(-Math.PI / 2 + 4 * Math.PI / 3));
+
+                const bottomVerts = [b1, b2, b3];
+                const topVerts = [t1, t2, t3];
+
+                bottomVerts.forEach((v, idx) => {
+                    const pos = v.clone().add(v.clone().normalize().multiplyScalar(exp));
+                    sceneGroup.add(createSphere(pos.x, pos.y, pos.z, R, materials.pingpongA, {
+                        title: `ทรงกลมชั้นล่างที่ ${idx+1} (ฟ้า)`,
+                        pos: `(${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)})`,
+                        frac: 'ฐานชั้นล่าง (CN=6)',
+                        role: 'สามเหลี่ยมด้านเท่าฐานล่าง'
+                    }));
+                });
+
+                topVerts.forEach((v, idx) => {
+                    const pos = v.clone().add(v.clone().normalize().multiplyScalar(exp));
+                    sceneGroup.add(createSphere(pos.x, pos.y, pos.z, R, materials.pingpongB, {
+                        title: `ทรงกลมชั้นบนที่ ${idx+1} (เหลืองทอง)`,
+                        pos: `(${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)})`,
+                        frac: 'ยอดชั้นบน (CN=6)',
+                        role: 'สามเหลี่ยมด้านเท่าคว่ำสลับทิศ 60°'
+                    }));
+                });
+
+                if (state.showHoleCentralSphere) {
+                    const holeSphere = createSphere(0, 0, 0, 0.414 * R, materials.octaHole, {
+                        title: 'อนุภาคแทรกในช่อง Octahedral (แดงสด)',
+                        pos: '(0, 0, 0)',
+                        frac: 'ขนาดพอดี r = 0.414 R',
+                        role: 'สัมผัสทรงกลมทั้ง 6 ลูกพร้อมกัน (CN = 6)'
+                    });
+                    sceneGroup.add(holeSphere);
+                }
+
+                if (state.showHolePolyhedron) {
+                    const octaGeo = new THREE.BufferGeometry();
+                    const tris = [
+                        t1, t2, b3,
+                        t2, t3, b1,
+                        t3, t1, b2,
+                        b1, b2, t3,
+                        b2, b3, t1,
+                        b3, b1, t2,
+                        t1, b3, b2,
+                        t2, b1, b3
+                    ];
+                    const pts = [];
+                    tris.forEach(v => pts.push(v.x, v.y, v.z));
+                    octaGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pts), 3));
+                    octaGeo.computeVertexNormals();
+
+                    const mesh = new THREE.Mesh(octaGeo, materials.polyhedronOcta);
+                    const wire = new THREE.LineSegments(new THREE.WireframeGeometry(octaGeo), materials.wireframe);
+                    sceneGroup.add(mesh);
+                    sceneGroup.add(wire);
+                }
+
+            } else if (state.holeType === 'cubic') {
+                const corners = [];
+                for (let x of [-1, 1]) {
+                    for (let y of [-1, 1]) {
+                        for (let z of [-1, 1]) {
+                            const v = new THREE.Vector3(x * R, y * R, z * R);
+                            corners.push(v);
+                            const pos = v.clone().add(v.clone().normalize().multiplyScalar(exp));
+                            const mat = (y > 0) ? materials.pingpongB : materials.pingpongA;
+                            sceneGroup.add(createSphere(pos.x, pos.y, pos.z, R, mat, {
+                                title: 'ทรงกลมมุมลูกบาศก์',
+                                pos: `(${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)})`,
+                                frac: 'มุมลูกบาศก์ (CN=8)',
+                                role: 'เกิดจากการเรียงแบบ Simple Cubic'
+                            }));
+                        }
+                    }
+                }
+
+                if (state.showHoleCentralSphere) {
+                    const holeSphere = createSphere(0, 0, 0, 0.732 * R, materials.cubicHole, {
+                        title: 'อนุภาคแทรกในช่อง Cubic (ม่วงคราม)',
+                        pos: '(0, 0, 0)',
+                        frac: 'ขนาดพอดี r = 0.732 R',
+                        role: 'สัมผัสกับทรงกลมทั้ง 8 มุมพร้อมกัน (CN = 8)'
+                    });
+                    sceneGroup.add(holeSphere);
+                }
+
+                if (state.showHolePolyhedron) {
+                    const cubeGeo = new THREE.BoxGeometry(2 * R, 2 * R, 2 * R);
+                    const mesh = new THREE.Mesh(cubeGeo, materials.polyhedronCube);
+                    const wire = new THREE.LineSegments(new THREE.EdgesGeometry(cubeGeo), materials.wireframe);
+                    sceneGroup.add(mesh);
+                    sceneGroup.add(wire);
+                }
+            }
+            updateUIInfo();
+        }
+
+        // --- Render Metallic Unit Cells ---
+        function renderMetallicCell() {
+            clearScene();
+            sceneGroup.position.set(0, 0, 0);
+
+            const isFill = (state.metallicStyle === 'fill');
+            const exp = state.cellExplode * 1.5;
+
+            // Wireframe Unit Cell Box
+            if (state.showCellBox && state.metallicType !== 'hcp') {
+                const boxGeo = new THREE.BoxGeometry(2, 2, 2);
+                const wire = new THREE.LineSegments(new THREE.EdgesGeometry(boxGeo), materials.wireframe);
+                sceneGroup.add(wire);
+            }
+
+            const corners = [-1, 1];
+
+            // Render crystal lattice plane if enabled
+            if (state.currentPlane === '100' && state.metallicType !== 'hcp') {
+                const planeGeo = new THREE.PlaneGeometry(2.05, 2.05);
+                const plane = new THREE.Mesh(planeGeo, materials.plane100);
+                plane.position.set(0, 0, 0);
+                sceneGroup.add(plane);
+            } else if (state.currentPlane === '110' && state.metallicType !== 'hcp') {
+                const planeGeo = new THREE.PlaneGeometry(2.05 * Math.SQRT2, 2.05);
+                const plane = new THREE.Mesh(planeGeo, materials.plane110);
+                plane.rotation.y = Math.PI / 4;
+                sceneGroup.add(plane);
+            } else if (state.currentPlane === '111' && state.metallicType !== 'hcp') {
+                const geom = new THREE.BufferGeometry();
+                const v = new Float32Array([
+                    1, -1, -1,
+                    -1, 1, -1,
+                    -1, -1, 1
+                ]);
+                geom.setAttribute('position', new THREE.BufferAttribute(v, 3));
+                geom.computeVertexNormals();
+                const plane = new THREE.Mesh(geom, materials.plane111);
+                sceneGroup.add(plane);
+            }
+
+            if (state.metallicType === 'sc') {
+                const r = isFill ? 1.0 : 0.28;
+                const cornerCoords = [];
+                corners.forEach(x => corners.forEach(y => corners.forEach(z => {
+                    const dir = new THREE.Vector3(x, y, z).normalize();
+                    const px = x + dir.x * exp;
+                    const py = y + dir.y * exp;
+                    const pz = z + dir.z * exp;
+                    cornerCoords.push(new THREE.Vector3(px, py, pz));
+                    sceneGroup.add(createSphere(px, py, pz, r, materials.pingpongA, {
+                        title: 'อะตอมมุม (Corner Atom)',
+                        pos: `(${x > 0 ? '+1' : '-1'}, ${y > 0 ? '+1' : '-1'}, ${z > 0 ? '+1' : '-1'})`,
+                        frac: '1/8 ของอะตอม',
+                        role: '8 มุม × (1/8) = 1 อะตอมต่อยูนิตเซลล์'
+                    }));
+                })));
+
+                if (!isFill) {
+                    for (let i = 0; i < cornerCoords.length; i++) {
+                        for (let j = i + 1; j < cornerCoords.length; j++) {
+                            const d = cornerCoords[i].distanceTo(cornerCoords[j]);
+                            if (Math.abs(d - (2.0 + exp * 1.0)) < 0.3 || (exp === 0 && Math.abs(d - 2.0) < 0.1)) {
+                                sceneGroup.add(createCylinderBond(cornerCoords[i], cornerCoords[j], 0.05, materials.bondStick));
+                            }
+                        }
+                    }
+                }
+
+            } else if (state.metallicType === 'bcc') {
+                const r = isFill ? 0.866 : 0.28;
+                const cornerCoords = [];
+                corners.forEach(x => corners.forEach(y => corners.forEach(z => {
+                    const dir = new THREE.Vector3(x, y, z).normalize();
+                    const px = x + dir.x * exp;
+                    const py = y + dir.y * exp;
+                    const pz = z + dir.z * exp;
+                    const v = new THREE.Vector3(px, py, pz);
+                    cornerCoords.push(v);
+                    sceneGroup.add(createSphere(px, py, pz, r, materials.pingpongA, {
+                        title: 'อะตอมมุม (Corner Atom)',
+                        pos: `(${x > 0 ? '+1' : '-1'}, ${y > 0 ? '+1' : '-1'}, ${z > 0 ? '+1' : '-1'})`,
+                        frac: '1/8 ของอะตอม',
+                        role: '8 มุม × (1/8) = 1 อะตอม'
+                    }));
+                })));
+
+                const centerAtom = createSphere(0, 0, 0, r, materials.pingpongB, {
+                    title: 'อะตอมใจกลาง (Body-Centered Atom)',
+                    pos: '(0, 0, 0)',
+                    frac: '1.0 (เต็มอะตอม)',
+                    role: 'อยู่กลางเซลล์ทั้งลูก รวม = 1 + 1 = 2 อะตอมต่อเซลล์'
+                });
+                sceneGroup.add(centerAtom);
+
+                if (!isFill) {
+                    cornerCoords.forEach(cv => {
+                        sceneGroup.add(createCylinderBond(new THREE.Vector3(0, 0, 0), cv, 0.045, materials.bondStick));
+                    });
+                } else {
+                    const pts = [new THREE.Vector3(-1, -1, -1), new THREE.Vector3(1, 1, 1)];
+                    const diagLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), materials.accentWire);
+                    sceneGroup.add(diagLine);
+                }
+
+            } else if (state.metallicType === 'fcc') {
+                const r = isFill ? 0.707 : 0.26;
+                const cornerCoords = [];
+                corners.forEach(x => corners.forEach(y => corners.forEach(z => {
+                    const dir = new THREE.Vector3(x, y, z).normalize();
+                    const px = x + dir.x * exp;
+                    const py = y + dir.y * exp;
+                    const pz = z + dir.z * exp;
+                    const v = new THREE.Vector3(px, py, pz);
+                    cornerCoords.push(v);
+                    sceneGroup.add(createSphere(px, py, pz, r, materials.pingpongA, {
+                        title: 'อะตอมมุม (Corner Atom)',
+                        pos: `(${x > 0 ? '+1' : '-1'}, ${y > 0 ? '+1' : '-1'}, ${z > 0 ? '+1' : '-1'})`,
+                        frac: '1/8 ของอะตอม',
+                        role: '8 มุม × (1/8) = 1 อะตอม'
+                    }));
+                })));
+
+                const faces = [
+                    [0, 0, 1], [0, 0, -1],
+                    [0, 1, 0], [0, -1, 0],
+                    [1, 0, 0], [-1, 0, 0]
+                ];
+                const faceCoords = [];
+                faces.forEach(p => {
+                    const px = p[0] + p[0] * exp;
+                    const py = p[1] + p[1] * exp;
+                    const pz = p[2] + p[2] * exp;
+                    const v = new THREE.Vector3(px, py, pz);
+                    faceCoords.push(v);
+                    sceneGroup.add(createSphere(px, py, pz, r, materials.pingpongB, {
+                        title: 'อะตอมกึ่งกลางหน้า (Face-Centered Atom)',
+                        pos: `(${p[0]}, ${p[1]}, ${p[2]})`,
+                        frac: '1/2 ของอะตอม',
+                        role: '6 หน้า × (1/2) = 3 อะตอม รวมเป็น 1 + 3 = 4 อะตอมต่อเซลล์'
+                    }));
+                });
+
+                if (!isFill) {
+                    faceCoords.forEach(fv => {
+                        cornerCoords.forEach(cv => {
+                            if (Math.abs(fv.distanceTo(cv) - Math.SQRT2 * (1 + exp*0.5)) < 0.45) {
+                                sceneGroup.add(createCylinderBond(fv, cv, 0.04, materials.bondStick));
+                            }
+                        });
+                    });
+                } else {
+                    const pts = [new THREE.Vector3(-1, -1, 1), new THREE.Vector3(1, 1, 1)];
+                    const diagLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), materials.accentWire);
+                    sceneGroup.add(diagLine);
+                }
+
+            } else if (state.metallicType === 'hcp') {
+                const rHcp = isFill ? 0.74 : 0.25;
+                const hexR = 1.6;
+                const hHcp = 2.4;
+                const halfH = hHcp / 2;
+
+                const topVerts = [];
+                const botVerts = [];
+
+                for (let i = 0; i < 6; i++) {
+                    const ang = (i * Math.PI) / 3;
+                    const x = hexR * Math.cos(ang);
+                    const z = hexR * Math.sin(ang);
+                    topVerts.push(new THREE.Vector3(x, halfH + exp, z));
+                    botVerts.push(new THREE.Vector3(x, -halfH - exp, z));
+                }
+
+                topVerts.forEach((v, idx) => {
+                    sceneGroup.add(createSphere(v.x, v.y, v.z, rHcp, materials.pingpongA, {
+                        title: `อะตอมมุมบนที่ ${idx+1}`,
+                        pos: `(${v.x.toFixed(1)}, ${v.y.toFixed(1)}, ${v.z.toFixed(1)})`,
+                        frac: '1/6 ของอะตอม',
+                        role: 'แชร์ร่วมกับ 6 ปริซึมหกเหลี่ยมรอบข้าง'
+                    }));
+                });
+                botVerts.forEach((v, idx) => {
+                    sceneGroup.add(createSphere(v.x, v.y, v.z, rHcp, materials.pingpongA, {
+                        title: `อะตอมมุมล่างที่ ${idx+1}`,
+                        pos: `(${v.x.toFixed(1)}, ${v.y.toFixed(1)}, ${v.z.toFixed(1)})`,
+                        frac: '1/6 ของอะตอม',
+                        role: '12 มุม × (1/6) = 2 อะตอม'
+                    }));
+                });
+
+                sceneGroup.add(createSphere(0, halfH + exp, 0, rHcp, materials.pingpongB, {
+                    title: 'อะตอมกลางหน้าฐานบน',
+                    pos: `(0, ${(halfH+exp).toFixed(1)}, 0)`,
+                    frac: '1/2 ของอะตอม',
+                    role: 'แชร์กับยูนิตเซลล์ด้านบน'
+                }));
+                sceneGroup.add(createSphere(0, -halfH - exp, 0, rHcp, materials.pingpongB, {
+                    title: 'อะตอมกลางหน้าฐานล่าง',
+                    pos: `(0, ${(-halfH-exp).toFixed(1)}, 0)`,
+                    frac: '1/2 ของอะตอม',
+                    role: '2 หน้า × (1/2) = 1 อะตอม'
+                }));
+
+                const midDist = hexR / Math.sqrt(3.0);
+                const midAngles = [Math.PI / 6, Math.PI / 6 + (2 * Math.PI / 3), Math.PI / 6 + (4 * Math.PI / 3)];
+                midAngles.forEach((ang, idx) => {
+                    const mx = midDist * Math.cos(ang);
+                    const mz = midDist * Math.sin(ang);
+                    sceneGroup.add(createSphere(mx, 0, mz, rHcp, materials.pingpongC, {
+                        title: `อะตอมชั้นกลางที่ ${idx+1}`,
+                        pos: `(${mx.toFixed(1)}, 0, ${mz.toFixed(1)})`,
+                        frac: '1.0 (เต็มทั้ง 3 อะตอม)',
+                        role: 'อยู่ภายในเซลล์ 100% รวมสุทธิ = 2 + 1 + 3 = 6 อะตอมต่อยูนิตเซลล์'
+                    }));
+                });
+
+                if (state.showCellBox) {
+                    const linePts = [];
+                    for (let i = 0; i <= 6; i++) linePts.push(topVerts[i % 6]);
+                    for (let i = 0; i <= 6; i++) linePts.push(botVerts[i % 6]);
+                    const prismLines = new THREE.BufferGeometry().setFromPoints(linePts);
+                    sceneGroup.add(new THREE.Line(prismLines, materials.wireframe));
+                    for (let i = 0; i < 6; i++) {
+                        const colPts = [topVerts[i], botVerts[i]];
+                        sceneGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(colPts), materials.wireframe));
+                    }
+                }
+            }
+            updateUIInfo();
+        }
+
+        // --- Render Ionic Crystals ---
+        function renderIonicCrystal() {
+            clearScene();
+            sceneGroup.position.set(0, 0, 0);
+
+            const isFill = (state.ionicStyle === 'fill');
+            const exp = state.ionicExplode * 1.5;
+
+            const boxGeo = new THREE.BoxGeometry(2, 2, 2);
+            sceneGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(boxGeo), materials.wireframe));
+
+            const corners = [-1, 1];
+
+            if (state.ionicType === 'nacl') {
+                const rCl = isFill ? 0.58 : 0.25;
+                const rNa = isFill ? 0.32 : 0.16;
+
+                corners.forEach(x => corners.forEach(y => corners.forEach(z => {
+                    const dir = new THREE.Vector3(x, y, z).normalize();
+                    const px = x + dir.x * exp;
+                    const py = y + dir.y * exp;
+                    const pz = z + dir.z * exp;
+                    sceneGroup.add(createSphere(px, py, pz, rCl, materials.ionCl, {
+                        title: 'Cl⁻ ไอออน (มุมยูนิตเซลล์ เขียว)',
+                        pos: `(${px.toFixed(1)}, ${py.toFixed(1)}, ${pz.toFixed(1)})`,
+                        frac: '1/8 ไอออน',
+                        role: '8 มุม × (1/8) = 1 Cl⁻'
+                    }));
+                })));
+
+                [[0,0,1], [0,0,-1], [0,1,0], [0,-1,0], [1,0,0], [-1,0,0]].forEach(p => {
+                    const px = p[0] + p[0] * exp;
+                    const py = p[1] + p[1] * exp;
+                    const pz = p[2] + p[2] * exp;
+                    sceneGroup.add(createSphere(px, py, pz, rCl, materials.ionCl, {
+                        title: 'Cl⁻ ไอออน (กลางหน้า เขียว)',
+                        pos: `(${px.toFixed(1)}, ${py.toFixed(1)}, ${pz.toFixed(1)})`,
+                        frac: '1/2 ไอออน',
+                        role: '6 หน้า × (1/2) = 3 Cl⁻ รวมทั้งเซลล์ = 4 Cl⁻'
+                    }));
+                });
+
+                sceneGroup.add(createSphere(0, 0, 0, rNa, materials.ionNa, {
+                    title: 'Na⁺ ไอออน (ใจกลางยูนิตเซลล์ ม่วง)',
+                    pos: '(0, 0, 0)',
+                    frac: '1.0 เต็มไอออน',
+                    role: 'อยู่ในช่อง Octahedral ตรงกลาง 1 Na⁺'
+                }));
+
+                const edges = [
+                    [1, 1, 0], [-1, 1, 0], [1, -1, 0], [-1, -1, 0],
+                    [1, 0, 1], [-1, 0, 1], [1, 0, -1], [-1, 0, -1],
+                    [0, 1, 1], [0, -1, 1], [0, 1, -1], [0, -1, -1]
+                ];
+                edges.forEach(p => {
+                    const dir = new THREE.Vector3(p[0], p[1], p[2]).normalize();
+                    const px = p[0] + dir.x * exp;
+                    const py = p[1] + dir.y * exp;
+                    const pz = p[2] + dir.z * exp;
+                    sceneGroup.add(createSphere(px, py, pz, rNa, materials.ionNa, {
+                        title: 'Na⁺ ไอออน (กึ่งกลางขอบ ม่วง)',
+                        pos: `(${px.toFixed(1)}, ${py.toFixed(1)}, ${pz.toFixed(1)})`,
+                        frac: '1/4 ไอออน',
+                        role: '12 ขอบ × (1/4) = 3 Na⁺ รวมทั้งเซลล์ = 4 Na⁺'
+                    }));
+                });
+
+                if (!isFill && exp === 0) {
+                    [[0,0,1], [0,0,-1], [0,1,0], [0,-1,0], [1,0,0], [-1,0,0]].forEach(p => {
+                        sceneGroup.add(createCylinderBond(new THREE.Vector3(0,0,0), new THREE.Vector3(p[0],p[1],p[2]), 0.035, materials.bondStick));
+                    });
+                }
+
+            } else if (state.ionicType === 'cscl') {
+                const rCl = isFill ? 0.65 : 0.26;
+                const rCs = isFill ? 0.60 : 0.24;
+
+                const cornerCoords = [];
+                corners.forEach(x => corners.forEach(y => corners.forEach(z => {
+                    const dir = new THREE.Vector3(x, y, z).normalize();
+                    const px = x + dir.x * exp;
+                    const py = y + dir.y * exp;
+                    const pz = z + dir.z * exp;
+                    const v = new THREE.Vector3(px, py, pz);
+                    cornerCoords.push(v);
+                    sceneGroup.add(createSphere(px, py, pz, rCl, materials.ionCl, {
+                        title: 'Cl⁻ ไอออน (มุมลูกบาศก์ เขียว)',
+                        pos: `(${px.toFixed(1)}, ${py.toFixed(1)}, ${pz.toFixed(1)})`,
+                        frac: '1/8 ไอออน',
+                        role: '8 มุม × (1/8) = 1 Cl⁻ ต่อสูตรหน่วย'
+                    }));
+                })));
+
+                sceneGroup.add(createSphere(0, 0, 0, rCs, materials.ionCs, {
+                    title: 'Cs⁺ ไอออน (Cubic Hole ใจกลาง แดงสด)',
+                    pos: '(0, 0, 0)',
+                    frac: '1.0 เต็มไอออน',
+                    role: 'ล้อมรอบด้วย 8 Cl⁻ (CN = 8:8)'
+                }));
+
+                if (!isFill) {
+                    cornerCoords.forEach(cv => {
+                        sceneGroup.add(createCylinderBond(new THREE.Vector3(0, 0, 0), cv, 0.04, materials.bondStick));
+                    });
+                }
+
+            } else if (state.ionicType === 'zns') {
+                const rS = isFill ? 0.56 : 0.25;
+                const rZn = isFill ? 0.28 : 0.16;
+
+                corners.forEach(x => corners.forEach(y => corners.forEach(z => {
+                    const dir = new THREE.Vector3(x, y, z).normalize();
+                    const px = x + dir.x * exp;
+                    const py = y + dir.y * exp;
+                    const pz = z + dir.z * exp;
+                    sceneGroup.add(createSphere(px, py, pz, rS, materials.ionS, {
+                        title: 'S²⁻ ไอออน (มุม FCC เหลือง)',
+                        pos: `(${px.toFixed(1)}, ${py.toFixed(1)}, ${pz.toFixed(1)})`,
+                        frac: '1/8 ไอออน',
+                        role: '8 มุม × (1/8) = 1 S²⁻'
+                    }));
+                })));
+
+                [[0,0,1], [0,0,-1], [0,1,0], [0,-1,0], [1,0,0], [-1,0,0]].forEach(p => {
+                    const px = p[0] + p[0] * exp;
+                    const py = p[1] + p[1] * exp;
+                    const pz = p[2] + p[2] * exp;
+                    sceneGroup.add(createSphere(px, py, pz, rS, materials.ionS, {
+                        title: 'S²⁻ ไอออน (กลางหน้า FCC เหลือง)',
+                        pos: `(${px.toFixed(1)}, ${py.toFixed(1)}, ${pz.toFixed(1)})`,
+                        frac: '1/2 ไอออน',
+                        role: '6 หน้า × (1/2) = 3 S²⁻ รวมเป็น 4 S²⁻'
+                    }));
+                });
+
+                const tHoles = [
+                    [0.5, 0.5, 0.5],
+                    [-0.5, -0.5, 0.5],
+                    [-0.5, 0.5, -0.5],
+                    [0.5, -0.5, -0.5]
+                ];
+                tHoles.forEach(p => {
+                    const dir = new THREE.Vector3(p[0], p[1], p[2]).normalize();
+                    const px = p[0] + dir.x * exp;
+                    const py = p[1] + dir.y * exp;
+                    const pz = p[2] + dir.z * exp;
+                    sceneGroup.add(createSphere(px, py, pz, rZn, materials.ionZn, {
+                        title: 'Zn²⁺ ไอออน (ช่อง Tetrahedral ฟ้าคราม)',
+                        pos: `(${px.toFixed(1)}, ${py.toFixed(1)}, ${pz.toFixed(1)})`,
+                        frac: '1.0 ไอออน (เต็มลูก)',
+                        role: 'บรรจุเพียง 4 ช่องจาก 8 ช่อง (50%) อัตราส่วน 4 Zn²⁺ : 4 S²⁻ (1:1)'
+                    }));
+                });
+
+            } else if (state.ionicType === 'caf2') {
+                const rCa = isFill ? 0.52 : 0.25;
+                const rF = isFill ? 0.30 : 0.16;
+
+                corners.forEach(x => corners.forEach(y => corners.forEach(z => {
+                    const dir = new THREE.Vector3(x, y, z).normalize();
+                    const px = x + dir.x * exp;
+                    const py = y + dir.y * exp;
+                    const pz = z + dir.z * exp;
+                    sceneGroup.add(createSphere(px, py, pz, rCa, materials.ionCa, {
+                        title: 'Ca²⁺ ไอออน (มุม FCC ครามเข้ม)',
+                        pos: `(${px.toFixed(1)}, ${py.toFixed(1)}, ${pz.toFixed(1)})`,
+                        frac: '1/8 ไอออน',
+                        role: '8 มุม × (1/8) = 1 Ca²⁺'
+                    }));
+                })));
+
+                [[0,0,1], [0,0,-1], [0,1,0], [0,-1,0], [1,0,0], [-1,0,0]].forEach(p => {
+                    const px = p[0] + p[0] * exp;
+                    const py = p[1] + p[1] * exp;
+                    const pz = p[2] + p[2] * exp;
+                    sceneGroup.add(createSphere(px, py, pz, rCa, materials.ionCa, {
+                        title: 'Ca²⁺ ไอออน (กลางหน้า FCC ครามเข้ม)',
+                        pos: `(${px.toFixed(1)}, ${py.toFixed(1)}, ${pz.toFixed(1)})`,
+                        frac: '1/2 ไอออน',
+                        role: '6 หน้า × (1/2) = 3 Ca²⁺ รวมเป็น 4 Ca²⁺'
+                    }));
+                });
+
+                for (let x of [-0.5, 0.5]) {
+                    for (let y of [-0.5, 0.5]) {
+                        for (let z of [-0.5, 0.5]) {
+                            const dir = new THREE.Vector3(x, y, z).normalize();
+                            const px = x + dir.x * exp;
+                            const py = y + dir.y * exp;
+                            const pz = z + dir.z * exp;
+                            sceneGroup.add(createSphere(px, py, pz, rF, materials.ionF, {
+                                title: 'F⁻ ไอออน (ช่อง Tetrahedral มิ้นต์ทีล)',
+                                pos: `(${px.toFixed(1)}, ${py.toFixed(1)}, ${pz.toFixed(1)})`,
+                                frac: '1.0 ไอออน (เต็มลูก)',
+                                role: 'บรรจุครบทั้ง 8 ช่อง (100%) อัตราส่วน 4 Ca²⁺ : 8 F⁻ = 1 : 2'
+                            }));
+                        }
+                    }
+                }
+            } else if (state.ionicType === 'catio3') {
+                const rCa = isFill ? 0.48 : 0.24;
+                const rTi = isFill ? 0.38 : 0.18;
+                const rO = isFill ? 0.32 : 0.15;
+
+                corners.forEach(x => corners.forEach(y => corners.forEach(z => {
+                    const dir = new THREE.Vector3(x, y, z).normalize();
+                    const px = x + dir.x * exp;
+                    const py = y + dir.y * exp;
+                    const pz = z + dir.z * exp;
+                    sceneGroup.add(createSphere(px, py, pz, rCa, materials.ionCa, {
+                        title: 'Ca²⁺ ไอออน (มุมยูนิตเซลล์ คราม)',
+                        pos: `(${px.toFixed(1)}, ${py.toFixed(1)}, ${pz.toFixed(1)})`,
+                        frac: '1/8 ไอออน',
+                        role: '8 มุม × (1/8) = 1 Ca²⁺'
+                    }));
+                })));
+
+                sceneGroup.add(createSphere(0, 0, 0, rTi, materials.ionTi, {
+                    title: 'Ti⁴⁺ ไอออน (ใจกลางยูนิตเซลล์ แดง)',
+                    pos: '(0, 0, 0)',
+                    frac: '1.0 เต็มไอออน',
+                    role: 'ล้อมรอบด้วย 6 O²⁻ ในรูปทรง Octahedron (CN = 6)'
+                }));
+
+                const faces = [
+                    [0, 0, 1], [0, 0, -1],
+                    [0, 1, 0], [0, -1, 0],
+                    [1, 0, 0], [-1, 0, 0]
+                ];
+                faces.forEach(p => {
+                    const px = p[0] + p[0] * exp;
+                    const py = p[1] + p[1] * exp;
+                    const pz = p[2] + p[2] * exp;
+                    sceneGroup.add(createSphere(px, py, pz, rO, materials.ionO, {
+                        title: 'O²⁻ ไอออน (กึ่งกลางหน้า ฟ้า)',
+                        pos: `(${px.toFixed(1)}, ${py.toFixed(1)}, ${pz.toFixed(1)})`,
+                        frac: '1/2 ไอออน',
+                        role: '6 หน้า × (1/2) = 3 O²⁻ รวมสูตร CaTiO₃'
+                    }));
+                });
+
+                if (!isFill) {
+                    faces.forEach(p => {
+                        sceneGroup.add(createCylinderBond(new THREE.Vector3(0,0,0), new THREE.Vector3(p[0],p[1],p[2]), 0.035, materials.bondStick));
+                    });
+                }
+            }
+            updateUIInfo();
+        }
+
+        // ================= UPDATE UI & DESCRIPTIONS =================
+        function updateUIInfo() {
+            const statName = document.getElementById('statName');
+            const statCN = document.getElementById('statCN');
+            const statPE = document.getElementById('statPE');
+            const explainBox = document.getElementById('explainBox');
+            const legendContainer = document.getElementById('legendContainer');
+            legendContainer.innerHTML = '';
+
+            function addLegend(color, name) {
+                const item = document.createElement('div');
+                item.className = 'legend-item';
+                item.innerHTML = `<span class="color-dot" style="background:${color}; color:${color}"></span><span>${name}</span>`;
+                legendContainer.appendChild(item);
+            }
+
+            if (state.currentTab === 'pingpong') {
+                if (state.pingpongCluster === 'single') {
+                    if (state.singleLayerType === 'closest') {
+                        statName.textContent = '1 Layer: Closest';
+                        statCN.textContent = '6 (ในระนาบ 2D)';
+                        statPE.textContent = '60.48% (พื้นที่ว่าง 39.52%)';
+                        explainBox.innerHTML = `<b>Closest Packing (ตอนที่ 1 ก. หน้า 15):</b><br>เรียงสับหว่าง หนาแน่นสุดใน 2D เกิดช่องสามเหลี่ยม (หงาย/คว่ำ)<br>ปริมาตร 1 ลูก = 4/3&pi;<i>r</i><sup>3</sup>`;
+                        addLegend('#0ea5e9', 'ลูกปิงปอง (ชั้น A ฟ้า)');
+                        addLegend('#ef4444', 'กรอบยูนิตเซลล์สี่เหลี่ยมด้านขนาน (แดง)');
+                    } else {
+                        statName.textContent = '1 Layer: Simple Cubic';
+                        statCN.textContent = '4 (ในระนาบ 2D)';
+                        statPE.textContent = '52.38% (พื้นที่ว่าง 47.62%)';
+                        explainBox.innerHTML = `<b>Simple Cubic (ตอนที่ 1 ก. หน้า 15):</b><br>เรียงตรงกัน เกิดช่องสี่เหลี่ยมระหว่าง 4 ลูก<br>จัดเรียงหลวมกว่าแบบ Closest Packing`;
+                        addLegend('#fbbf24', 'ลูกปิงปอง (เหลืองทอง)');
+                        addLegend('#ef4444', 'กรอบยูนิตเซลล์จัตุรัส (แดง)');
+                    }
+                } else {
+                    const isHCP = (state.stacking === 'hcp');
+                    statName.textContent = isHCP ? 'HCP (ABAB...)' : 'FCC (ABCABC...)';
+                    statCN.textContent = '12 (6 ในชั้น + 3 บน + 3 ล่าง)';
+                    statPE.textContent = '74.08% (ช่องว่าง 25.92%)';
+
+                    if (isHCP) {
+                        explainBox.innerHTML = `<b>HCP (ABAB...):</b><br>ชั้น 3 วางทับชั้น 1 พอดี (Top View ซ้อนทับกัน)<br>มีช่อง <span class="highlight-t">Tetrahedral (ชมพู)</span> และ <span class="highlight-o">Octahedral (แดง)</span>`;
+                    } else {
+                        explainBox.innerHTML = `<b>FCC (ABCABC...):</b><br>ชั้น 3 วางบนช่อง C ไม่ตรงกับชั้น 1 หรือ 2<br>ชั้น 4 ถึงจะตรงกับชั้น 1 (Top View สลับทิศ 180°)`;
+                    }
+
+                    addLegend('#0ea5e9', 'ชั้นที่ 1 (A - ฟ้าสดใส)');
+                    addLegend('#fbbf24', 'ชั้นที่ 2 (B - เหลืองทองชัดเจน)');
+                    addLegend(isHCP ? '#0ea5e9' : '#10b981', isHCP ? 'ชั้นที่ 3 (A - ฟ้าสดใส ทับชั้น 1)' : 'ชั้นที่ 3 (C - เขียวมรกต สลับทิศ)');
+                    addLegend('#d946ef', 'ช่อง T (4 ลูก, r = 0.225 R ชมพู)');
+                    addLegend('#ef4444', 'ช่อง O (6 ลูก, r = 0.414 R แดงสด)');
+                }
+            } else if (state.currentTab === 'holes') {
+                if (state.holeType === 'tetra') {
+                    statName.textContent = 'Tetrahedral Void';
+                    statCN.textContent = '4 (ทรงสี่หน้า)';
+                    statPE.textContent = 'r = 0.225 R (2N ช่องต่อ N อะตอม)';
+                    explainBox.innerHTML = `<b>ช่องเททระฮีดรัล:</b> เกิดจากทรงกลม 4 ลูก<br>ขนาดช่องว่าง: <i>r</i><sub>void</sub> &approx; 0.225<i>R</i><br>ตัวอย่าง: Zn<sup>2+</sup> ใน ZnS, F<sup>-</sup> ใน CaF<sub>2</sub>`;
+                    addLegend('#0ea5e9', 'ฐาน 3 ลูก (ฟ้า)');
+                    addLegend('#fbbf24', 'ปิดยอด 1 ลูก (เหลืองทอง)');
+                    addLegend('#d946ef', 'ช่องว่างทรงสี่หน้า (ชมพูม่วง)');
+                } else if (state.holeType === 'octa') {
+                    statName.textContent = 'Octahedral Void';
+                    statCN.textContent = '6 (ทรงแปดหน้า)';
+                    statPE.textContent = 'r = 0.414 R (N ช่องต่อ N อะตอม)';
+                    explainBox.innerHTML = `<b>ช่องออกตะฮีดรัล:</b> เกิดจากทรงกลม 6 ลูก<br>ขนาดช่องว่าง: <i>r</i><sub>void</sub> &approx; 0.414<i>R</i> (ใหญ่กว่า T)<br>ตัวอย่าง: Na<sup>+</sup> ใน NaCl`;
+                    addLegend('#0ea5e9', 'ชั้นล่าง 3 ลูก (ฟ้า)');
+                    addLegend('#fbbf24', 'ชั้นบน 3 ลูก (เหลืองทอง)');
+                    addLegend('#ef4444', 'ช่องว่างทรงแปดหน้า (แดงสด)');
+                } else if (state.holeType === 'cubic') {
+                    statName.textContent = 'Cubic Void';
+                    statCN.textContent = '8 (ลูกบาศก์)';
+                    statPE.textContent = 'r = 0.732 R (1 ช่องต่อยูนิตเซลล์)';
+                    explainBox.innerHTML = `<b>ช่องลูกบาศก์:</b> เกิดจากทรงกลม 8 ลูกเรียงแบบ SC<br>ขนาดช่องว่าง: <i>r</i><sub>void</sub> &approx; 0.732<i>R</i><br>ตัวอย่าง: Cs<sup>+</sup> ใน CsCl`;
+                    addLegend('#0ea5e9', 'มุมล่าง 4 ลูก (ฟ้า)');
+                    addLegend('#fbbf24', 'มุมบน 4 ลูก (เหลืองทอง)');
+                    addLegend('#8b5cf6', 'ช่องว่างลูกบาศก์ (ม่วงคราม)');
+                }
+            } else if (state.currentTab === 'unitcells') {
+                if (state.metallicType === 'sc') {
+                    statName.textContent = 'Simple Cubic (SC)';
+                    statCN.textContent = '6';
+                    statPE.textContent = '52.38% (n = 1 อะตอม)';
+                    explainBox.innerHTML = `<b>SC:</b> อะตอมอยู่ที่มุม 8 มุม (8 × 1/8 = 1 อะตอม)<br>ความสัมพันธ์: <i>a</i> = 2<i>r</i><br>จัดเรียงหลวม พบได้ยากในธรรมชาติ (เช่น โพโลเนียม Po)`;
+                    addLegend('#0ea5e9', 'อะตอมที่มุม (1/8 ฟ้า)');
+                } else if (state.metallicType === 'bcc') {
+                    statName.textContent = 'Body-Centred Cubic (BCC)';
+                    statCN.textContent = '8';
+                    statPE.textContent = '68.04% (n = 2 อะตอม)';
+                    explainBox.innerHTML = `<b>BCC:</b> มุม 8 จุด (1) + กลางเซลล์ 1 = รวม 2 อะตอม<br>ความสัมพันธ์ตาม Body Diagonal: <i>a</i>&radic;3 = 4<i>r</i><br>ตัวอย่าง: Fe, Na, K, Cr, W`;
+                    addLegend('#0ea5e9', 'อะตอมที่มุม (1/8 ฟ้า)');
+                    addLegend('#fbbf24', 'ใจกลางยูนิตเซลล์ (1.0 เหลืองทอง)');
+                } else if (state.metallicType === 'fcc') {
+                    statName.textContent = 'Face-Centred Cubic (FCC)';
+                    statCN.textContent = '12';
+                    statPE.textContent = '74.08% (n = 4 อะตอม)';
+                    explainBox.innerHTML = `<b>FCC:</b> มุม 8 จุด (1) + กลางหน้า 6 (3) = รวม 4 อะตอม<br>ความสัมพันธ์ตาม Face Diagonal: <i>a</i>&radic;2 = 4<i>r</i><br>ตัวอย่าง: Cu, Al, Au, Ag, Pt, Ni`;
+                    addLegend('#0ea5e9', 'อะตอมที่มุม (1/8 ฟ้า)');
+                    addLegend('#fbbf24', 'อะตอมกึ่งกลางหน้า (1/2 เหลืองทอง)');
+                } else if (state.metallicType === 'hcp') {
+                    statName.textContent = 'Hexagonal Close-Packed (HCP)';
+                    statCN.textContent = '12';
+                    statPE.textContent = '74.05% (n = 6 อะตอม)';
+                    explainBox.innerHTML = `<b>HCP:</b> 12 มุม (2) + 2 หน้า (1) + 3 กลาง = รวม 6 อะตอม<br>อัตราส่วน <i>c/a</i> = &radic;(8/3) &approx; 1.633<br>ตัวอย่าง: Mg, Zn, Ti, Co, Cd`;
+                    addLegend('#0ea5e9', 'มุมปริซึมหกเหลี่ยม (1/6 ฟ้า)');
+                    addLegend('#fbbf24', 'กลางหน้าฐาน (1/2 เหลืองทอง)');
+                    addLegend('#10b981', 'อะตอมชั้นกลางในเซลล์ (1.0 เขียวมรกต)');
+                }
+            } else if (state.currentTab === 'ionic') {
+                if (state.ionicType === 'nacl') {
+                    statName.textContent = 'Rock Salt (NaCl)';
+                    statCN.textContent = '6 : 6';
+                    statPE.textContent = 'Z = 4 สูตรหน่วย (4 Na⁺, 4 Cl⁻)';
+                    explainBox.innerHTML = `<b>NaCl:</b> Cl<sup>-</sup> เป็น FCC, Na<sup>+</sup> ในช่อง Octahedral ทั้งหมด<br>อัตราส่วนรัศมี <i>r</i><sub>+</sub>/<i>r</i><sub>-</sub> = 0.414 - 0.732`;
+                    addLegend('#16a34a', 'Cl- (FCC เขียวสด)');
+                    addLegend('#a855f7', 'Na+ (Octahedral ม่วง)');
+                } else if (state.ionicType === 'cscl') {
+                    statName.textContent = 'Cesium Chloride (CsCl)';
+                    statCN.textContent = '8 : 8';
+                    statPE.textContent = 'Z = 1 สูตรหน่วย (1 Cs⁺, 1 Cl⁻)';
+                    explainBox.innerHTML = `<b>CsCl:</b> Cl<sup>-</sup> เป็น Simple Cubic, Cs<sup>+</sup> อยู่กลางเซลล์ (Cubic)<br>อัตราส่วนรัศมี <i>r</i><sub>+</sub>/<i>r</i><sub>-</sub> > 0.732`;
+                    addLegend('#16a34a', 'Cl- (SC เขียวสด)');
+                    addLegend('#ef4444', 'Cs+ (Cubic แดงสด)');
+                } else if (state.ionicType === 'zns') {
+                    statName.textContent = 'Zinc Blende (ZnS)';
+                    statCN.textContent = '4 : 4';
+                    statPE.textContent = 'Z = 4 สูตรหน่วย (4 Zn²⁺, 4 S²⁻)';
+                    explainBox.innerHTML = `<b>ZnS:</b> S<sup>2-</sup> เป็น FCC, Zn<sup>2+</sup> ในช่อง Tetrahedral ครึ่งเดียว (4/8 ช่อง)<br>อัตราส่วนรัศมี <i>r</i><sub>+</sub>/<i>r</i><sub>-</sub> = 0.225 - 0.414`;
+                    addLegend('#eab308', 'S2- (FCC เหลือง)');
+                    addLegend('#0284c7', 'Zn2+ (Tetrahedral 50% ฟ้าคราม)');
+                } else if (state.ionicType === 'caf2') {
+                    statName.textContent = 'Fluorite (CaF₂)';
+                    statCN.textContent = '8 : 4 (Ca²⁺ : F⁻)';
+                    statPE.textContent = 'Z = 4 สูตรหน่วย (4 Ca²⁺, 8 F⁻)';
+                    explainBox.innerHTML = `<b>CaF<sub>2</sub>:</b> Ca<sup>2+</sup> เป็น FCC, F<sup>-</sup> ในช่อง Tetrahedral ครบทั้ง 8 ช่อง<br>อัตราส่วน Ca<sup>2+</sup> : F<sup>-</sup> = 1 : 2`;
+                    addLegend('#4f46e5', 'Ca2+ (FCC น้ำเงินคราม)');
+                    addLegend('#14b8a6', 'F- (Tetrahedral 100% มิ้นต์ทีล)');
+                } else if (state.ionicType === 'catio3') {
+                    statName.textContent = 'Perovskite (CaTiO₃)';
+                    statCN.textContent = 'Ca: 12, Ti: 6, O: 2';
+                    statPE.textContent = 'Z = 1 สูตรหน่วย (1 Ca, 1 Ti, 3 O)';
+                    explainBox.innerHTML = `<b>CaTiO<sub>3</sub>:</b> Ca<sup>2+</sup> อยู่ที่มุม 8 จุด, Ti<sup>4+</sup> อยู่ใจกลางเซลล์, O<sup>2-</sup> อยู่กึ่งกลางหน้าทั้ง 6 หน้า<br>เป็นโครงสร้างสำคัญในเซลล์แสงอาทิตย์และสารตัวนำยวดยิ่ง`;
+                    addLegend('#4f46e5', 'Ca2+ (Corner น้ำเงินคราม)');
+                    addLegend('#f43f5e', 'Ti4+ (Center แดงกุหลาบ)');
+                    addLegend('#38bdf8', 'O2- (Faces ฟ้า)');
+                }
+            }
+        }
+
+        // ================= EVENT LISTENERS =================
+
+        // Tabs
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                state.currentTab = btn.getAttribute('data-tab');
+
+                document.querySelectorAll('.panel-section').forEach(p => p.style.display = 'none');
+                const targetPanel = document.getElementById('panel-' + state.currentTab);
+                if (targetPanel) targetPanel.style.display = 'block';
+
+                if (state.currentTab === 'pingpong') {
+                    renderPingPongPacking();
+                } else if (state.currentTab === 'holes') {
+                    renderIsolatedHoles();
+                } else if (state.currentTab === 'unitcells') {
+                    renderMetallicCell();
+                } else if (state.currentTab === 'ionic') {
+                    renderIonicCrystal();
+                }
+            });
+        });
+
+        // Stacking Toggle: HCP vs FCC
+        document.getElementById('btnHCP').addEventListener('click', () => {
+            state.stacking = 'hcp';
+            document.getElementById('btnHCP').classList.add('btn-toggle-active');
+            document.getElementById('btnFCC').classList.remove('btn-toggle-active');
+            document.getElementById('labelLayer3').textContent = '● ชั้นที่ 3 (A - ฟ้า ทับชั้น 1 พอดี)';
+            document.getElementById('labelLayer3').style.color = '#38bdf8';
+            renderPingPongPacking();
+        });
+
+        document.getElementById('btnFCC').addEventListener('click', () => {
+            state.stacking = 'fcc';
+            document.getElementById('btnFCC').classList.add('btn-toggle-active');
+            document.getElementById('btnHCP').classList.remove('btn-toggle-active');
+            document.getElementById('labelLayer3').textContent = '● ชั้นที่ 3 (C - เขียว สลับทิศ 180°)';
+            document.getElementById('labelLayer3').style.color = '#10b981';
+            renderPingPongPacking();
+        });
+
+        // Cluster Type Select
+        document.getElementById('pingpongClusterSelect').addEventListener('change', (e) => {
+            state.pingpongCluster = e.target.value;
+            const isSingle = (state.pingpongCluster === 'single');
+            document.getElementById('layerControlsGroup').style.display = isSingle ? 'none' : 'flex';
+            document.getElementById('holesToggleGroup').style.display = isSingle ? 'none' : 'flex';
+            document.getElementById('singleLayerGroup').style.display = isSingle ? 'flex' : 'none';
+            renderPingPongPacking();
+        });
+
+        // Single Layer Type Buttons
+        document.getElementById('btn1Closest').addEventListener('click', () => {
+            state.singleLayerType = 'closest';
+            document.getElementById('btn1Closest').classList.add('btn-toggle-active');
+            document.getElementById('btn1Simple').classList.remove('btn-toggle-active');
+            renderSingleLayer();
+        });
+
+        document.getElementById('btn1Simple').addEventListener('click', () => {
+            state.singleLayerType = 'simple';
+            document.getElementById('btn1Simple').classList.add('btn-toggle-active');
+            document.getElementById('btn1Closest').classList.remove('btn-toggle-active');
+            renderSingleLayer();
+        });
+
+        // Layer Toggles
+        document.getElementById('chkLayerA').addEventListener('change', e => { state.layerA = e.target.checked; renderPingPongPacking(); });
+        document.getElementById('chkLayerB').addEventListener('change', e => { state.layerB = e.target.checked; renderPingPongPacking(); });
+        document.getElementById('chkLayerC').addEventListener('change', e => { state.layerC = e.target.checked; renderPingPongPacking(); });
+
+        // Layer Spacing Slider
+        document.getElementById('sliderLayerSpacing').addEventListener('input', e => {
+            const val = parseInt(e.target.value);
+            state.layerSpacing = val / 100.0;
+            document.getElementById('valLayerSpacing').textContent = val + '%';
+            renderPingPongPacking();
+        });
+
+        // Holes Toggles
+        document.getElementById('chkShowTHoles').addEventListener('change', e => { state.showTHoles = e.target.checked; renderPingPongPacking(); });
+        document.getElementById('chkShowOHoles').addEventListener('change', e => { state.showOHoles = e.target.checked; renderPingPongPacking(); });
+
+        // Holes Explorer Select & Controls
+        document.getElementById('holeTypeSelect').addEventListener('change', e => {
+            state.holeType = e.target.value;
+            renderIsolatedHoles();
+        });
+
+        document.getElementById('sliderHoleExplode').addEventListener('input', e => {
+            const val = parseInt(e.target.value);
+            state.holeExplode = val / 100.0;
+            document.getElementById('valHoleExplode').textContent = val + '%';
+            renderIsolatedHoles();
+        });
+
+        document.getElementById('chkHolePolyhedron').addEventListener('change', e => {
+            state.showHolePolyhedron = e.target.checked;
+            renderIsolatedHoles();
+        });
+
+        document.getElementById('chkHoleCentralSphere').addEventListener('change', e => {
+            state.showHoleCentralSphere = e.target.checked;
+            renderIsolatedHoles();
+        });
+
+        // Metallic Cell Select & Controls
+        document.getElementById('metallicSelect').addEventListener('change', e => {
+            state.metallicType = e.target.value;
+            renderMetallicCell();
+        });
+
+        document.getElementById('btnCellBallStick').addEventListener('click', () => {
+            state.metallicStyle = 'stick';
+            document.getElementById('btnCellBallStick').classList.add('btn-toggle-active');
+            document.getElementById('btnCellSpaceFill').classList.remove('btn-toggle-active');
+            renderMetallicCell();
+        });
+
+        document.getElementById('btnCellSpaceFill').addEventListener('click', () => {
+            state.metallicStyle = 'fill';
+            document.getElementById('btnCellSpaceFill').classList.add('btn-toggle-active');
+            document.getElementById('btnCellBallStick').classList.remove('btn-toggle-active');
+            renderMetallicCell();
+        });
+
+        document.getElementById('chkShowUnitCellBox').addEventListener('change', e => {
+            state.showCellBox = e.target.checked;
+            renderMetallicCell();
+        });
+
+        // Crystal Plane Buttons
+        const planeBtns = {
+            'none': document.getElementById('btnPlaneNone'),
+            '100': document.getElementById('btnPlane100'),
+            '110': document.getElementById('btnPlane110'),
+            '111': document.getElementById('btnPlane111')
+        };
+
+        function setPlane(planeName) {
+            state.currentPlane = planeName;
+            Object.keys(planeBtns).forEach(k => {
+                if (planeBtns[k]) planeBtns[k].classList.remove('btn-toggle-active');
+            });
+            if (planeBtns[planeName]) planeBtns[planeName].classList.add('btn-toggle-active');
+            renderMetallicCell();
+        }
+
+        planeBtns['none'].addEventListener('click', () => setPlane('none'));
+        planeBtns['100'].addEventListener('click', () => setPlane('100'));
+        planeBtns['110'].addEventListener('click', () => setPlane('110'));
+        planeBtns['111'].addEventListener('click', () => setPlane('111'));
+
+        // Unit Cell Explode Slider
+        document.getElementById('sliderCellExplode').addEventListener('input', e => {
+            const val = parseInt(e.target.value);
+            state.cellExplode = val / 100.0;
+            document.getElementById('valCellExplode').textContent = val + '%';
+            renderMetallicCell();
+        });
+
+        // Ionic Select & Controls
+        document.getElementById('ionicSelect').addEventListener('change', e => {
+            state.ionicType = e.target.value;
+            renderIonicCrystal();
+        });
+
+        document.getElementById('btnIonicBallStick').addEventListener('click', () => {
+            state.ionicStyle = 'stick';
+            document.getElementById('btnIonicBallStick').classList.add('btn-toggle-active');
+            document.getElementById('btnIonicSpaceFill').classList.remove('btn-toggle-active');
+            renderIonicCrystal();
+        });
+
+        document.getElementById('btnIonicSpaceFill').addEventListener('click', () => {
+            state.ionicStyle = 'fill';
+            document.getElementById('btnIonicSpaceFill').classList.add('btn-toggle-active');
+            document.getElementById('btnIonicBallStick').classList.remove('btn-toggle-active');
+            renderIonicCrystal();
+        });
+
+        document.getElementById('sliderIonicExplode').addEventListener('input', e => {
+            const val = parseInt(e.target.value);
+            state.ionicExplode = val / 100.0;
+            document.getElementById('valIonicExplode').textContent = val + '%';
+            renderIonicCrystal();
+        });
+
+        // ================= CAMERA & THEME CONTROLS =================
+        function setActiveViewBtn(btnId) {
+            document.querySelectorAll('#viewport-controls .view-btn').forEach(b => {
+                if (b.id !== 'btnAutoRotate' && b.id !== 'btnToggleAxes' && b.id !== 'btnScreenshot' && b.id !== 'btnThemeToggle') {
+                    b.classList.remove('active');
+                }
+            });
+            if (btnId) {
+                const el = document.getElementById(btnId);
+                if (el) el.classList.add('active');
+            }
+        }
+
+        document.getElementById('btnViewTop').addEventListener('click', () => {
+            setActiveViewBtn('btnViewTop');
+            camera.position.set(0, 18, 0.001);
+            camera.lookAt(0, 0, 0);
+            if (controls) controls.target.set(0, 0, 0);
+            showToast('🎯 มุมมองด้านบน Top View (2D)');
+        });
+
+        document.getElementById('btnViewSide').addEventListener('click', () => {
+            setActiveViewBtn('btnViewSide');
+            camera.position.set(0, 0.5, 18);
+            camera.lookAt(0, 0, 0);
+            if (controls) controls.target.set(0, 0, 0);
+            showToast('📐 มุมมองด้านข้าง Side View');
+        });
+
+        document.getElementById('btnView3D').addEventListener('click', () => {
+            setActiveViewBtn('btnView3D');
+            camera.position.set(10, 12, 14);
+            camera.lookAt(0, 0, 0);
+            if (controls) controls.target.set(0, 0, 0);
+            showToast('🔄 มุมมอง 3 มิติ Perspective');
+        });
+
+        document.getElementById('btnResetView').addEventListener('click', () => {
+            setActiveViewBtn('btnView3D');
+            camera.position.set(0, 10, 16);
+            camera.lookAt(0, 0, 0);
+            sceneGroup.rotation.set(0, 0, 0);
+            if (controls) {
+                controls.reset();
+                controls.target.set(0, 0, 0);
+            }
+            showToast('🔍 รีเซ็ตตำแหน่งมุมมอง');
+        });
+
+        const btnAutoRotate = document.getElementById('btnAutoRotate');
+        btnAutoRotate.addEventListener('click', () => {
+            state.autoRotate = !state.autoRotate;
+            if (state.autoRotate) {
+                btnAutoRotate.classList.add('active');
+                showToast('▶️ เปิดการหมุนรอบอัตโนมัติ');
+            } else {
+                btnAutoRotate.classList.remove('active');
+                showToast('⏸ หยุดการหมุน');
+            }
+        });
+
+        // Theme Toggle: Dark Studio vs Clean Lab Light
+        const btnThemeToggle = document.getElementById('btnThemeToggle');
+        btnThemeToggle.addEventListener('click', () => {
+            isLightMode = !isLightMode;
+            document.body.classList.toggle('light-theme', isLightMode);
+
+            if (isLightMode) {
+                scene.background = lightBgColor;
+                ambientLight.intensity = 0.95;
+                dirLight1.intensity = 0.85;
+                materials.wireframe.color.setHex(0x334155); // Dark wireframe in light mode
+                btnThemeToggle.classList.add('active');
+                showToast('☀️ สลับเป็นโหมดพื้นหลังสว่าง (Clean Lab Light)');
+            } else {
+                scene.background = darkBgColor;
+                ambientLight.intensity = 0.7;
+                dirLight1.intensity = 0.95;
+                materials.wireframe.color.setHex(0xe2e8f0); // Bright wireframe in dark mode
+                btnThemeToggle.classList.remove('active');
+                showToast('🌙 สลับเป็นโหมดพื้นหลังมืด (Dark Studio)');
+            }
+        });
+
+        // Axes Helper Toggle
+        const btnToggleAxes = document.getElementById('btnToggleAxes');
+        btnToggleAxes.addEventListener('click', () => {
+            state.showAxes = !state.showAxes;
+            axesHelper.visible = state.showAxes;
+            if (state.showAxes) {
+                btnToggleAxes.classList.add('active');
+                showToast('🌐 แสดงแกน 3 มิติ (X: แดง, Y: เขียว, Z: น้ำเงิน)');
+            } else {
+                btnToggleAxes.classList.remove('active');
+                showToast('🌐 ซ่อนแกน 3 มิติ');
+            }
+        });
+
+        // Screenshot capture button
+        document.getElementById('btnScreenshot').addEventListener('click', () => {
+            renderer.render(scene, camera);
+            const dataUrl = renderer.domElement.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = `crystal-structure-${Date.now()}.png`;
+            link.href = dataUrl;
+            link.click();
+            showToast('📸 บันทึกภาพโมเดล 3D คมชัดเรียบร้อย!');
+        });
+
+        // Modals Management
+        const cheatSheetModal = document.getElementById('cheatSheetModal');
+        document.getElementById('btnOpenCheatSheet').addEventListener('click', () => cheatSheetModal.style.display = 'flex');
+        document.getElementById('btnCloseCheatSheet').addEventListener('click', () => cheatSheetModal.style.display = 'none');
+        cheatSheetModal.addEventListener('click', (e) => {
+            if (e.target === cheatSheetModal) cheatSheetModal.style.display = 'none';
+        });
+
+        const calcModal = document.getElementById('calcModal');
+        document.getElementById('btnOpenCalc').addEventListener('click', () => calcModal.style.display = 'flex');
+        document.getElementById('btnCloseCalc').addEventListener('click', () => calcModal.style.display = 'none');
+        calcModal.addEventListener('click', (e) => {
+            if (e.target === calcModal) calcModal.style.display = 'none';
+        });
+
+        const quizModal = document.getElementById('quizModal');
+        document.getElementById('btnOpenQuiz').addEventListener('click', () => {
+            initQuiz();
+            quizModal.style.display = 'flex';
+        });
+        document.getElementById('btnCloseQuiz').addEventListener('click', () => quizModal.style.display = 'none');
+        quizModal.addEventListener('click', (e) => {
+            if (e.target === quizModal) quizModal.style.display = 'none';
+        });
+
+        // ================= INTERACTIVE CALCULATOR LOGIC =================
+        function updateCalculator() {
+            const latticeType = document.getElementById('calcLatticeType').value;
+            const r = parseFloat(document.getElementById('calcRadius').value) || 0;
+            let a = 0;
+            if (latticeType === 'sc') a = 2 * r;
+            else if (latticeType === 'bcc') a = (4 * r) / Math.sqrt(3);
+            else if (latticeType === 'fcc') a = 2 * Math.SQRT2 * r;
+
+            const vol = Math.pow(a, 3);
+            document.getElementById('calcResultA').textContent = `a = ${a.toFixed(2)} pm | ปริมาตรเซลล์ V = ${(vol/1e6).toFixed(2)} × 10⁶ pm³`;
+
+            const rCat = parseFloat(document.getElementById('calcCationR').value) || 1;
+            const rAni = parseFloat(document.getElementById('calcAnionR').value) || 1;
+            const ratio = rCat / rAni;
+            let predText = '';
+            if (ratio < 0.155) predText = `r⁺/r⁻ = ${ratio.toFixed(3)} ➔ Linear (CN = 2)`;
+            else if (ratio < 0.225) predText = `r⁺/r⁻ = ${ratio.toFixed(3)} ➔ Triangular (CN = 3)`;
+            else if (ratio < 0.414) predText = `r⁺/r⁻ = ${ratio.toFixed(3)} ➔ ช่อง Tetrahedral (CN = 4) เช่น ZnS`;
+            else if (ratio < 0.732) predText = `r⁺/r⁻ = ${ratio.toFixed(3)} ➔ ช่อง Octahedral (CN = 6) เช่น NaCl`;
+            else predText = `r⁺/r⁻ = ${ratio.toFixed(3)} ➔ ช่อง Cubic (CN = 8) เช่น CsCl`;
+            document.getElementById('calcResultRatio').textContent = predText;
+        }
+
+        document.getElementById('calcLatticeType').addEventListener('change', updateCalculator);
+        document.getElementById('calcRadius').addEventListener('input', updateCalculator);
+        document.getElementById('calcCationR').addEventListener('input', updateCalculator);
+        document.getElementById('calcAnionR').addEventListener('input', updateCalculator);
+
+        // ================= INTERACTIVE QUIZ SYSTEM =================
+        const quizQuestions = [
+            {
+                q: "1. การจัดเรียงอนุภาคแบบชิดที่สุด (Closest packing) ใน 2 มิติ อนุภาคแต่ละลูกมีเลขโคออร์ดิเนชัน (CN) เท่าใด?",
+                options: ["4", "6", "8", "12"],
+                ans: 1,
+                exp: "ในการเรียงแบบสับหว่าง (Closest packing 2D) อนุภาค 1 ลูกจะถูกล้อมรอบด้วย 6 ลูกในระนาบรูปหกเหลี่ยมด้านเท่า (CN = 6)"
+            },
+            {
+                q: "2. โครงสร้างแบบ HCP (ABAB...) และ FCC (ABCABC...) มีความหนาแน่นของการบรรจุ (Packing Efficiency) เท่ากันหรือไม่ เท่ากับกี่เปอร์เซ็นต์?",
+                options: [
+                    "เท่ากัน เท่ากับ 68.04%",
+                    "ไม่เท่ากัน HCP 74.08% แต่ FCC 68.04%",
+                    "เท่ากัน เท่ากับ 74.08%",
+                    "ไม่เท่ากัน FCC 74.08% แต่ HCP 60.48%"
+                ],
+                ans: 2,
+                exp: "ทั้ง HCP และ FCC เป็น Close-Packed Structures ใน 3 มิติ มี Packing Efficiency สูงสุดเท่ากันคือ 74.08% (ช่องว่าง 25.92%) และ CN = 12"
+            },
+            {
+                q: "3. ในการเรียงตัวของอนุภาคทรงกลมจำนวน N ลูก จะเกิดช่องว่าง Tetrahedral และ Octahedral เป็นจำนวนเท่าใด?",
+                options: [
+                    "Tetrahedral = N ช่อง, Octahedral = 2N ช่อง",
+                    "Tetrahedral = 2N ช่อง, Octahedral = N ช่อง",
+                    "Tetrahedral = N ช่อง, Octahedral = N ช่อง",
+                    "Tetrahedral = 4N ช่อง, Octahedral = 2N ช่อง"
+                ],
+                ans: 1,
+                exp: "ใน Close-packed lattice จะมีช่อง Tetrahedral เป็น 2 เท่าของจำนวนอะตอม (2N) และช่อง Octahedral เท่ากับจำนวนอะตอมพอดี (N)"
+            },
+            {
+                q: "4. ยูนิตเซลล์ของผลึกโซเดียมคลอไรด์ (NaCl) จัดเป็นโครงสร้างแบบใด และมีจำนวนสูตรหน่วย (Z) เท่าใดในหนึ่งยูนิตเซลล์?",
+                options: [
+                    "Cl⁻ เป็น Simple Cubic, Na⁺ อยู่กลางเซลล์, Z = 1",
+                    "Cl⁻ เป็น FCC, Na⁺ บรรจุในช่อง Tetrahedral ครบ, Z = 8",
+                    "Cl⁻ เป็น FCC, Na⁺ บรรจุในช่อง Octahedral ทั้งหมด, Z = 4",
+                    "Cl⁻ เป็น BCC, Na⁺ บรรจุในช่อง Octahedral, Z = 2"
+                ],
+                ans: 2,
+                exp: "NaCl มี Cl⁻ จัดเรียงแบบ FCC และ Na⁺ แทรกอยู่ในช่อง Octahedral ทั้งหมด (ที่ขอบและใจกลาง) รวมมี 4 Na⁺ และ 4 Cl⁻ (Z = 4 สูตรหน่วย)"
+            },
+            {
+                q: "5. โลหะที่มีโครงสร้างยูนิตเซลล์แบบ Body-Centred Cubic (BCC) เช่น เหล็ก มีความสัมพันธ์ระหว่างความยาวขอบเซลล์ (a) กับรัศมีอะตอม (r) อย่างไร?",
+                options: [
+                    "a = 2r",
+                    "a√2 = 4r",
+                    "a√3 = 4r",
+                    "a√3 = 2r"
+                ],
+                ans: 2,
+                exp: "ใน BCC อะตอมจะสัมผัสกันตลอดแนวทแยงมุมใหญ่ของลูกบาศก์ (Body Diagonal) ซึ่งมีความยาว a√3 จึงได้ความสัมพันธ์ 4r = a√3"
+            }
+        ];
+
+        let quizIndex = 0;
+        let quizScore = 0;
+
+        function initQuiz() {
+            quizIndex = 0;
+            quizScore = 0;
+            renderQuizCard();
+        }
+
+        function renderQuizCard() {
+            const q = quizQuestions[quizIndex];
+            document.getElementById('quizProgress').textContent = `ข้อที่ ${quizIndex + 1} / ${quizQuestions.length}`;
+            document.getElementById('quizScoreText').textContent = `คะแนน: ${quizScore}`;
+            document.getElementById('quizQuestion').textContent = q.q;
+
+            const optContainer = document.getElementById('quizOptions');
+            optContainer.innerHTML = '';
+            const feedback = document.getElementById('quizFeedback');
+            feedback.style.display = 'none';
+            document.getElementById('btnNextQuiz').style.display = 'none';
+            document.getElementById('btnRestartQuiz').style.display = 'none';
+
+            q.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'btn-secondary';
+                btn.style.textAlign = 'left';
+                btn.style.padding = '10px 14px';
+                btn.style.fontSize = '0.9rem';
+                btn.textContent = opt;
+                btn.addEventListener('click', () => {
+                    const allBtns = optContainer.querySelectorAll('button');
+                    allBtns.forEach(b => b.disabled = true);
+
+                    if (idx === q.ans) {
+                        quizScore++;
+                        btn.style.background = '#10b981';
+                        btn.style.borderColor = '#34d399';
+                        feedback.style.background = 'rgba(16, 185, 129, 0.25)';
+                        feedback.style.border = '1px solid #10b981';
+                        feedback.style.color = '#a7f3d0';
+                        feedback.innerHTML = `<b>🎉 ถูกต้อง!</b> ${q.exp}`;
+                    } else {
+                        btn.style.background = '#ef4444';
+                        btn.style.borderColor = '#f87171';
+                        allBtns[q.ans].style.background = '#10b981';
+                        feedback.style.background = 'rgba(239, 68, 68, 0.25)';
+                        feedback.style.border = '1px solid #ef4444';
+                        feedback.style.color = '#fecaca';
+                        feedback.innerHTML = `<b>❌ ยังไม่ถูกต้อง</b> คำตอบที่ถูกคือ "${q.options[q.ans]}"<br>${q.exp}`;
+                    }
+                    feedback.style.display = 'block';
+                    document.getElementById('quizScoreText').textContent = `คะแนน: ${quizScore}`;
+
+                    if (quizIndex < quizQuestions.length - 1) {
+                        document.getElementById('btnNextQuiz').style.display = 'inline-block';
+                    } else {
+                        document.getElementById('btnRestartQuiz').style.display = 'inline-block';
+                        document.getElementById('quizProgress').textContent = `🎉 ทำครบแล้ว! ได้ ${quizScore} / ${quizQuestions.length} คะแนน`;
+                    }
+                });
+                optContainer.appendChild(btn);
+            });
+        }
+
+        document.getElementById('btnNextQuiz').addEventListener('click', () => {
+            quizIndex++;
+            renderQuizCard();
+        });
+
+        document.getElementById('btnRestartQuiz').addEventListener('click', initQuiz);
+
+        // ================= INTERACTIVE RAYCASTING (ATOM TOOLTIP) =================
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const tooltip = document.getElementById('atomTooltip');
+
+        function onMouseMove(event) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(sceneGroup.children, true);
+
+            const sphereHit = intersects.find(hit => hit.object.isMesh && hit.object.userData && hit.object.userData.title);
+
+            if (sphereHit) {
+                const data = sphereHit.object.userData;
+                document.getElementById('ttTitle').textContent = data.title || 'อนุภาค';
+                document.getElementById('ttPos').textContent = data.pos || '-';
+                document.getElementById('ttFrac').textContent = data.frac || '-';
+                document.getElementById('ttRole').textContent = data.role || '-';
+                tooltip.style.left = `${event.clientX - rect.left}px`;
+                tooltip.style.top = `${event.clientY - rect.top}px`;
+                tooltip.style.display = 'block';
+            } else {
+                tooltip.style.display = 'none';
+            }
+        }
+
+        container.addEventListener('mousemove', onMouseMove);
+        container.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+
+        // Toast Helper
+        let toastTimer;
+        function showToast(msg, icon = '✨') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').textContent = msg;
+            document.getElementById('toastIcon').textContent = icon;
+            toast.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+
+        // Resize Handler
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+
+        // ================= ANIMATION LOOP =================
+        function animate() {
+            requestAnimationFrame(animate);
+            if (state.autoRotate) {
+                sceneGroup.rotation.y += 0.005;
+            }
+            if (controls) controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Initialize with Ping-Pong Packing
+        renderPingPongPacking();
+        animate();
+    </script>
+</body>
+
+</html>

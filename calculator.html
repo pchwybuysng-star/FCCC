@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧮 เครื่องคำนวณโครงสร้างผลึก (Crystallography Calculator)</title>
+    <style>
+        :root {
+            --bg-main: #070b14;
+            --bg-card: rgba(15, 23, 42, 0.95);
+            --border-color: rgba(56, 189, 248, 0.25);
+            --accent-cyan: #38bdf8;
+            --accent-blue: #0284c7;
+            --accent-emerald: #10b981;
+            --accent-amber: #f59e0b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Kanit', Prompt, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px 16px;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 16px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            color: var(--accent-cyan);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav-links a {
+            color: #cbd5e1;
+            text-decoration: none;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid var(--border-color);
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .nav-links a:hover {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .grid-cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        @media (max-width: 768px) {
+            .grid-cards { grid-template-columns: 1fr; }
+        }
+
+        .calc-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px 22px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .calc-title {
+            font-size: 1.05rem;
+            color: var(--accent-cyan);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+            padding-bottom: 8px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        label {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+        }
+
+        input, select {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(51, 65, 85, 0.8);
+            background: #0f172a;
+            color: white;
+            font-size: 0.88rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+        }
+
+        .result-box {
+            background: #090d16;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 4px;
+        }
+
+        .result-label {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+
+        .result-val {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+        }
+
+        .formula-badge {
+            font-family: monospace;
+            background: rgba(30, 41, 59, 0.6);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: #f59e0b;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>🧮 Crystallography Calculator</h1>
+                <p style="color:var(--text-secondary); font-size:0.85rem; margin-top:4px;">เครื่องมือคำนวณโครงสร้างผลึก กฎของแบร็กก์ ความหนาแน่น และรัศมีช่องว่าง</p>
+            </div>
+            <div class="nav-links">
+                <a href="dammm.html"><span>🎮</span><span>3D Simulator</span></a>
+                <a href="quiz.html"><span>📝</span><span>แบบทดสอบ</span></a>
+            </div>
+        </header>
+
+        <div class="grid-cards">
+            <!-- 1. Lattice Parameter & Radius -->
+            <div class="calc-card">
+                <div class="calc-title">
+                    <span>1. ความยาวขอบเซลล์ (a) ⟷ รัศมีอะตอม (r)</span>
+                </div>
+                <div class="form-group">
+                    <label>ชนิดโครงสร้างผลึก:</label>
+                    <select id="cellType">
+                        <option value="sc">Simple Cubic (SC: a = 2r)</option>
+                        <option value="bcc">Body-Centred Cubic (BCC: a = 4r/√3)</option>
+                        <option value="fcc" selected>Face-Centred Cubic (FCC: a = 2√2 r)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>รัศมีอะตอม r (pm):</label>
+                    <input type="number" id="inputRadius" value="128" step="any">
+                </div>
+                <div class="result-box">
+                    <span class="result-label">ความยาวขอบยูนิตเซลล์ (a):</span>
+                    <span class="result-val" id="resA">a = 362.04 pm</span>
+                    <span class="result-label" style="margin-top:4px;">ปริมาตรเซลล์ (V = a³):</span>
+                    <span class="result-val" id="resV" style="font-size:0.95rem; color:#cbd5e1;">4.74 × 10⁻²³ cm³</span>
+                </div>
+            </div>
+
+            <!-- 2. Theoretical Density -->
+            <div class="calc-card">
+                <div class="calc-title">
+                    <span>2. ความหนาแน่นเชิงทฤษฎี (ρ = Z·M / V·N_A)</span>
+                </div>
+                <div class="form-group">
+                    <label>เลือกธาตุตัวอย่าง:</label>
+                    <select id="presetElement">
+                        <option value="cu" selected>ทองแดง Cu (FCC, M=63.55 g/mol, r=128 pm)</option>
+                        <option value="al">อะลูมิเนียม Al (FCC, M=26.98 g/mol, r=143 pm)</option>
+                        <option value="fe">เหล็ก α-Fe (BCC, M=55.85 g/mol, r=124 pm)</option>
+                        <option value="po">โพโลเนียม Po (SC, M=209 g/mol, r=167 pm)</option>
+                        <option value="custom">กำหนดค่าเอง (Custom)</option>
+                    </select>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                    <div class="form-group">
+                        <label>มวลต่อโมล M (g/mol):</label>
+                        <input type="number" id="inputM" value="63.55" step="any">
+                    </div>
+                    <div class="form-group">
+                        <label>จำนวนอะตอม Z:</label>
+                        <input type="number" id="inputZ" value="4" step="any">
+                    </div>
+                </div>
+                <div class="result-box">
+                    <span class="result-label">ความหนาแน่นจากการคำนวณ (Theoretical Density):</span>
+                    <span class="result-val" id="resDensity" style="color:var(--accent-emerald);">8.89 g/cm³</span>
+                </div>
+            </div>
+
+            <!-- 3. Radius Ratio & Void Prediction -->
+            <div class="calc-card">
+                <div class="calc-title">
+                    <span>3. อัตราส่วนรัศมีไอออน (r⁺ / r⁻ Rule)</span>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                    <div class="form-group">
+                        <label>รัศมีไอออนบวก r⁺ (pm):</label>
+                        <input type="number" id="inputCation" value="102" step="any">
+                    </div>
+                    <div class="form-group">
+                        <label>รัศมีไอออนลบ r⁻ (pm):</label>
+                        <input type="number" id="inputAnion" value="181" step="any">
+                    </div>
+                </div>
+                <div class="result-box">
+                    <span class="result-label">อัตราส่วน r⁺ / r⁻:</span>
+                    <span class="result-val" id="resRatio">0.564</span>
+                    <span class="result-label" style="margin-top:4px;">การทำนายชนิดช่องว่าง & โคออร์ดิเนชัน:</span>
+                    <span class="result-val" id="resCoord" style="font-size:0.95rem; color:#f59e0b;">Octahedral Void (CN = 6) โครงสร้างแบบ NaCl</span>
+                </div>
+            </div>
+
+            <!-- 4. Bragg's Law XRD -->
+            <div class="calc-card">
+                <div class="calc-title">
+                    <span>4. กฎของแบร็กก์ XRD (nλ = 2d sinθ)</span>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                    <div class="form-group">
+                        <label>ความยาวคลื่น λ (Å):</label>
+                        <input type="number" id="inputLambda" value="1.5406" step="any">
+                    </div>
+                    <div class="form-group">
+                        <label>อันดับการเลี้ยวเบน n:</label>
+                        <input type="number" id="inputOrder" value="1" step="1">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>มุมตกกระทบ θ (องศา Deg):</label>
+                    <input type="number" id="inputTheta" value="21.65" step="any">
+                </div>
+                <div class="result-box">
+                    <span class="result-label">ระยะห่างระหว่างระนาบผลึก d-spacing:</span>
+                    <span class="result-val" id="resD" style="color:var(--accent-cyan);">d = 2.088 Å (208.8 pm)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 1. Lattice Parameter
+        function updateLattice() {
+            const type = document.getElementById('cellType').value;
+            const r = parseFloat(document.getElementById('inputRadius').value) || 0;
+            let a = 0;
+            if (type === 'sc') a = 2 * r;
+            else if (type === 'bcc') a = (4 * r) / Math.sqrt(3);
+            else if (type === 'fcc') a = 2 * Math.SQRT2 * r;
+
+            document.getElementById('resA').textContent = `a = ${a.toFixed(2)} pm`;
+            // a in cm = a * 1e-10
+            const aCm = a * 1e-10;
+            const volCm3 = Math.pow(aCm, 3);
+            document.getElementById('resV').textContent = `${(volCm3 * 1e24).toFixed(2)} × 10⁻²⁴ cm³`;
+            updateDensity();
+        }
+
+        // 2. Density
+        function updateDensity() {
+            const z = parseFloat(document.getElementById('inputZ').value) || 1;
+            const m = parseFloat(document.getElementById('inputM').value) || 1;
+            const type = document.getElementById('cellType').value;
+            const r = parseFloat(document.getElementById('inputRadius').value) || 1;
+            let a = 0;
+            if (type === 'sc') a = 2 * r;
+            else if (type === 'bcc') a = (4 * r) / Math.sqrt(3);
+            else if (type === 'fcc') a = 2 * Math.SQRT2 * r;
+
+            const aCm = a * 1e-10;
+            const v = Math.pow(aCm, 3);
+            const NA = 6.02214076e23;
+            const rho = (z * m) / (v * NA);
+            document.getElementById('resDensity').textContent = `${rho.toFixed(2)} g/cm³`;
+        }
+
+        document.getElementById('presetElement').addEventListener('change', (e) => {
+            const val = e.target.value;
+            if (val === 'cu') {
+                document.getElementById('cellType').value = 'fcc';
+                document.getElementById('inputRadius').value = '128';
+                document.getElementById('inputM').value = '63.55';
+                document.getElementById('inputZ').value = '4';
+            } else if (val === 'al') {
+                document.getElementById('cellType').value = 'fcc';
+                document.getElementById('inputRadius').value = '143';
+                document.getElementById('inputM').value = '26.98';
+                document.getElementById('inputZ').value = '4';
+            } else if (val === 'fe') {
+                document.getElementById('cellType').value = 'bcc';
+                document.getElementById('inputRadius').value = '124';
+                document.getElementById('inputM').value = '55.85';
+                document.getElementById('inputZ').value = '2';
+            } else if (val === 'po') {
+                document.getElementById('cellType').value = 'sc';
+                document.getElementById('inputRadius').value = '167';
+                document.getElementById('inputM').value = '209';
+                document.getElementById('inputZ').value = '1';
+            }
+            updateLattice();
+        });
+
+        // 3. Ratio Rule
+        function updateRatio() {
+            const cat = parseFloat(document.getElementById('inputCation').value) || 1;
+            const ani = parseFloat(document.getElementById('inputAnion').value) || 1;
+            const r = cat / ani;
+            document.getElementById('resRatio').textContent = r.toFixed(3);
+
+            let txt = '';
+            if (r < 0.155) txt = 'CN = 2 (Linear)';
+            else if (r < 0.225) txt = 'CN = 3 (Trigonal Planar)';
+            else if (r < 0.414) txt = 'CN = 4 (Tetrahedral Void) เช่น ZnS';
+            else if (r < 0.732) txt = 'CN = 6 (Octahedral Void) เช่น NaCl';
+            else txt = 'CN = 8 (Cubic Void) เช่น CsCl';
+            document.getElementById('resCoord').textContent = txt;
+        }
+
+        // 4. Bragg's Law
+        function updateBragg() {
+            const lambda = parseFloat(document.getElementById('inputLambda').value) || 1.5406;
+            const n = parseFloat(document.getElementById('inputOrder').value) || 1;
+            const thetaDeg = parseFloat(document.getElementById('inputTheta').value) || 20;
+            const thetaRad = (thetaDeg * Math.PI) / 180.0;
+            const sinVal = Math.sin(thetaRad);
+            if (sinVal <= 0) {
+                document.getElementById('resD').textContent = 'มุมไม่ถูกต้อง';
+                return;
+            }
+            const d = (n * lambda) / (2 * sinVal);
+            document.getElementById('resD').textContent = `d = ${d.toFixed(3)} Å (${(d*100).toFixed(1)} pm)`;
+        }
+
+        document.getElementById('cellType').addEventListener('change', updateLattice);
+        document.getElementById('inputRadius').addEventListener('input', updateLattice);
+        document.getElementById('inputM').addEventListener('input', updateDensity);
+        document.getElementById('inputZ').addEventListener('input', updateDensity);
+
+        document.getElementById('inputCation').addEventListener('input', updateRatio);
+        document.getElementById('inputAnion').addEventListener('input', updateRatio);
+
+        document.getElementById('inputLambda').addEventListener('input', updateBragg);
+        document.getElementById('inputOrder').addEventListener('input', updateBragg);
+        document.getElementById('inputTheta').addEventListener('input', updateBragg);
+
+        updateLattice();
+        updateRatio();
+        updateBragg();
+    </script>
+</body>
+</html>
